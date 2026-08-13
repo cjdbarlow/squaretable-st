@@ -1,4 +1,4 @@
-# table_plugin_test.py - sublime plugin with integration tests
+# tests/table_plugin_test.py - Sublime integration-test harness
 
 # Copyright (C) 2012  Free Software Foundation, Inc.
 # SPDX-License-Identifier: Apache-2.0
@@ -621,15 +621,3 @@ Test {0} executed sucessfully
 
     def get_buffer_text(self):
         return self.view.substr(sublime.Region(0, self.view.size()))
-
-
-class TableEditorFilmCommand(sublime_plugin.WindowCommand):
-
-    def run(self):
-        view = self.window.new_file()
-        view.set_scratch(True)
-        view.set_name("Sublime Table Editor Film")
-        view.settings().set("table_editor_border_style", "simple")
-        view.run_command("table_editor_enable_for_current_view", {"prop": "enable_table_editor"})
-        suite = TableEditorTestSuite(view)
-        suite.run()

@@ -242,6 +242,8 @@ class TextTable:
         self.syntax = syntax
         self.prefix = ""
         self.rows = []
+        self.source_text = None
+        self._render_lines_override = None
         self.pack()
 
     def __len__(self):
@@ -283,6 +285,8 @@ class TextTable:
                     row.columns = row.columns[:-shift]
 
     def pack(self):
+        self.source_text = None
+        self._render_lines_override = None
         if len(self.rows) == 0:
             return
 
@@ -381,7 +385,15 @@ class TextTable:
         return True
 
     def render_lines(self):
+        if self._render_lines_override is not None:
+            return list(self._render_lines_override)
         return [self.prefix + row.render() for row in self.rows]
+
+    def set_render_lines(self, lines):
+        self._render_lines_override = list(lines)
+
+    def clear_render_lines(self):
+        self._render_lines_override = None
 
     def render(self):
         return "\n".join(self.render_lines())
@@ -483,6 +495,9 @@ class TableDriver:
 
     def __init__(self, syntax):
         self.syntax = syntax
+
+    def visual_field_at_column(self, table, row_num, line_text, column):
+        return self.syntax.line_parser.parse(line_text).field_num(column)
 
     def visual_column_count(self, table, row_ind):
         return sum([1 for column in table[row_ind].columns
@@ -780,4 +795,5 @@ class BaseTableParser:
             row = self.parse_row(table, line)
             table.rows.append(row)
         table.pack()
+        table.source_text = text
         return table

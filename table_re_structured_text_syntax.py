@@ -29,8 +29,6 @@ class ReStructuredTextTableSyntax(tbase.TableSyntax):
     def __init__(self, table_configuration):
         tbase.TableSyntax.__init__(self, "reStructuredText", table_configuration)
 
-        self.keep_space_left = True
-
         self.table_parser = tborder.BorderTableParser(self)
         self.table_driver = tgrid.GridTableDriver(self)
 

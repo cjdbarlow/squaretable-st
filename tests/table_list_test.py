@@ -1,6 +1,9 @@
 import unittest
 
-import table_list
+try:
+    from .. import table_list
+except (ImportError, ValueError):
+    import table_list
 
 
 class ListContinuationTest(unittest.TestCase):

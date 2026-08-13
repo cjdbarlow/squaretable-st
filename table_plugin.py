@@ -14,14 +14,15 @@ import re
 try:
     from . import table_lib as tlib
     from . import table_base as tbase
+    from . import table_grid_model as tmodel
 except (ImportError, ValueError):
     import table_lib as tlib
     import table_base as tbase
+    import table_grid_model as tmodel
 
 
 GRID_SYNTAX_NAMES = ('Pandoc', 'reStructuredText')
-GRID_BORDER_RE = re.compile(r'^\s*\+(?:[-=]+\+)+\s*$')
-GRID_ROW_RE = re.compile(r'^\s*(?:\|.*\||\+[-=+]+)\s*$')
+GRID_ROW_RE = re.compile(r'^\s*[|+].*[|+]\s*$')
 
 
 def auto_detect_syntax_name(view):
@@ -49,22 +50,32 @@ def syntax_settings_name(syntax):
 
 
 def _is_grid_content(view, point):
-    line = view.substr(view.line(point))
-    if re.match(r'^\s*\|.*\|\s*$', line) is None:
-        return False
+    return _grid_document_at(view, point) is not None
 
-    row = view.rowcol(point)[0]
+
+def _grid_document_at(view, point):
+    row, column = view.rowcol(point)
+    if not _is_grid_row(view, row):
+        return None
+
     first_row = row
     while first_row > 0 and _is_grid_row(view, first_row - 1):
         first_row -= 1
-
     last_row = row
     final_row = view.rowcol(view.size())[0]
     while last_row < final_row and _is_grid_row(view, last_row + 1):
         last_row += 1
 
-    return any(GRID_BORDER_RE.match(_row_text(view, row_num))
-               for row_num in range(first_row, last_row + 1))
+    text = '\n'.join(_row_text(view, candidate)
+                     for candidate in range(first_row, last_row + 1))
+    try:
+        return tmodel.GridDocument.try_from_text(text)
+    except tbase.TableException:
+        try:
+            return tmodel.GridDocument.from_editing_text(
+                text, row - first_row, column)
+        except tbase.TableException:
+            return None
 
 
 def _is_grid_row(view, row):
@@ -81,16 +92,20 @@ class TableEditorContextListener(sublime_plugin.EventListener):
         if key != 'table_editor_multiline_grid':
             return None
 
-        enabled = configured_syntax_name(view) in GRID_SYNTAX_NAMES
+        syntax_enabled = configured_syntax_name(view) in GRID_SYNTAX_NAMES
+        values = []
         for selection in view.sel():
             end = max(selection.begin(), selection.end() - 1)
-            enabled = (enabled and
-                       _is_grid_content(view, selection.begin()) and
-                       _is_grid_content(view, end))
+            values.append(
+                syntax_enabled and
+                _is_grid_content(view, selection.begin()) and
+                _is_grid_content(view, end))
 
         if operator == sublime.OP_NOT_EQUAL:
-            return enabled != operand
-        return enabled == operand
+            matches = [value != operand for value in values]
+        else:
+            matches = [value == operand for value in values]
+        return all(matches) if match_all else any(matches)
 
 
 class TableContext:
@@ -103,13 +118,16 @@ class TableContext:
         self.first_table_row = self._get_first_table_row(sel_row, sel_col)
         self.last_table_row = self._get_last_table_row(sel_row, sel_col)
         self.table_text = self._get_table_text(self.first_table_row, self.last_table_row)
-        self.visual_field_num = self._visual_field_num(sel_row, sel_col)
         self.row_num = sel_row - self.first_table_row
-
-        self.table_pos = tbase.TablePos(self.row_num, self.visual_field_num)
-
         self.table = self.syntax.table_parser.parse_text(self.table_text)
         self.table_driver = self.syntax.table_driver
+        tbase.check_condition(
+            (not self.table.empty() and
+             0 <= self.row_num < len(self.table) and
+             len(self.table[self.row_num]) > 0),
+            "Expected a table at the cursor")
+        self.visual_field_num = self.visual_field_num_at(sel_row, sel_col)
+        self.table_pos = tbase.TablePos(self.row_num, self.visual_field_num)
         self.field_num = self.table_driver.visual_to_internal_index(self.table, self.table_pos).field_num
 
     def _get_table_text(self, first_table_row, last_table_row):
@@ -140,10 +158,11 @@ class TableContext:
         text = self._get_text(row)
         return self.syntax.table_parser.is_table_row(text)
 
-    def _visual_field_num(self, sel_row, sel_col):
+    def visual_field_num_at(self, sel_row, sel_col):
         line_text = self._get_text(sel_row)
-        line = self.syntax.line_parser.parse(line_text)
-        return line.field_num(sel_col)
+        return self.table_driver.visual_field_at_column(
+            self.table, sel_row - self.first_table_row,
+            line_text, sel_col)
 
     def _get_text(self, row):
         point = self.view.text_point(row, 0)
@@ -231,15 +250,16 @@ class AbstractTableCommand(sublime_plugin.TextCommand):
             self.view.show(sel, False)
 
     def run_one_sel(self, edit, sel):
-        ctx = self.create_context(sel)
+        ctx = None
         try:
+            ctx = self.create_context(sel)
             msg, table_pos = self.run_operation(ctx)
             self.merge(edit, ctx)
             sublime.status_message("Table Editor: {0}".format(msg))
             return self.table_pos_sel(ctx, table_pos)
         except tbase.TableException as err:
             sublime.status_message("Table Editor: {0}".format(err))
-            return self.table_pos_sel(ctx, ctx.table_pos)
+            return sel
 
     def visual_field_sel(self, ctx, row_num, visual_field_num):
         if ctx.table.empty():
@@ -292,30 +312,39 @@ class TableEditorPreviousField(AbstractTableCommand):
         return ctx.table_driver.editor_previous_field(ctx.table, ctx.table_pos)
 
 
-class TableEditorNextRow(AbstractTableCommand):
+def reject_unsafe_grid_selections(view):
+    selections = list(view.sel())
+    uses_grid = (configured_syntax_name(view) in GRID_SYNTAX_NAMES and
+                 any(_is_grid_content(view, selection.begin())
+                     for selection in selections))
+    if (uses_grid and
+            (len(selections) != 1 or not selections[0].empty())):
+        sublime.status_message(
+            "Table Editor: Bordered grid editing requires one caret")
+        return True
+    return False
+
+
+class SingleCaretLogicalGridCommand(AbstractTableCommand):
+
+    def run(self, edit):
+        if reject_unsafe_grid_selections(self.view):
+            return
+        AbstractTableCommand.run(self, edit)
+
+
+class TableEditorNextRow(SingleCaretLogicalGridCommand):
     """
     Key: enter
     Re-align the table and move down to next row.
     Creates a new row if necessary.
     At the beginning or end of a line, enter still does new line.
     """
-    def run(self, edit):
-        selections = list(self.view.sel())
-        uses_grid = (configured_syntax_name(self.view) in GRID_SYNTAX_NAMES and
-                     any(_is_grid_content(self.view, selection.begin())
-                         for selection in selections))
-        if (uses_grid and
-                (len(selections) != 1 or not selections[0].empty())):
-            sublime.status_message(
-                "Table Editor: Multiline grid editing requires one caret")
-            return
-        AbstractTableCommand.run(self, edit)
-
     def run_operation(self, ctx):
         return ctx.table_driver.editor_next_row(ctx.table, ctx.table_pos)
 
 
-class TableEditorMoveColumnLeft(AbstractTableCommand):
+class TableEditorMoveColumnLeft(SingleCaretLogicalGridCommand):
     """
     Key: alt+left
     Move the current column left.
@@ -325,7 +354,7 @@ class TableEditorMoveColumnLeft(AbstractTableCommand):
                                                         ctx.table_pos)
 
 
-class TableEditorMoveColumnRight(AbstractTableCommand):
+class TableEditorMoveColumnRight(SingleCaretLogicalGridCommand):
     """
     Key: alt+right
     Move the current column right.
@@ -335,7 +364,7 @@ class TableEditorMoveColumnRight(AbstractTableCommand):
                                                          ctx.table_pos)
 
 
-class TableEditorDeleteColumn(AbstractTableCommand):
+class TableEditorDeleteColumn(SingleCaretLogicalGridCommand):
     """
     Key: alt+shift+left
     Kill the current column.
@@ -345,7 +374,7 @@ class TableEditorDeleteColumn(AbstractTableCommand):
                                                      ctx.table_pos)
 
 
-class TableEditorInsertColumn(AbstractTableCommand):
+class TableEditorInsertColumn(SingleCaretLogicalGridCommand):
     """
     Keys: alt+shift+right
     Insert a new column to the left of the cursor position.
@@ -355,7 +384,7 @@ class TableEditorInsertColumn(AbstractTableCommand):
                                                      ctx.table_pos)
 
 
-class TableEditorKillRow(AbstractTableCommand):
+class TableEditorKillRow(SingleCaretLogicalGridCommand):
     """
     Key : alt+shift+up
     Kill the current row.
@@ -364,7 +393,7 @@ class TableEditorKillRow(AbstractTableCommand):
         return ctx.table_driver.editor_kill_row(ctx.table, ctx.table_pos)
 
 
-class TableEditorInsertRow(AbstractTableCommand):
+class TableEditorInsertRow(SingleCaretLogicalGridCommand):
     """
     Key: alt+shift+down
     Insert a new row above the current row.
@@ -373,7 +402,7 @@ class TableEditorInsertRow(AbstractTableCommand):
         return ctx.table_driver.editor_insert_row(ctx.table, ctx.table_pos)
 
 
-class TableEditorMoveRowUp(AbstractTableCommand):
+class TableEditorMoveRowUp(SingleCaretLogicalGridCommand):
     """
     Key: alt+up
     Move the current row up.
@@ -382,7 +411,7 @@ class TableEditorMoveRowUp(AbstractTableCommand):
         return ctx.table_driver.editor_move_row_up(ctx.table, ctx.table_pos)
 
 
-class TableEditorMoveRowDown(AbstractTableCommand):
+class TableEditorMoveRowDown(SingleCaretLogicalGridCommand):
     """
     Key: alt+down
     Move the current row down.
@@ -450,9 +479,9 @@ class CellRowsSelectionCommand(object):
             return
 
         selection = selections[0]
-        ctx = self.create_context(sublime.Region(selection.begin(),
-                                                 selection.begin()))
         try:
+            ctx = self.create_context(sublime.Region(selection.begin(),
+                                                     selection.begin()))
             driver = multiline_grid_driver(ctx)
             start = self._table_pos(ctx, selection.begin())
             end = self._table_pos(ctx, selection.end() - 1)
@@ -480,9 +509,9 @@ class CellRowsSelectionCommand(object):
         tbase.check_condition(
             ctx.first_table_row <= row <= ctx.last_table_row,
             "Selection must stay within one table")
-        line = ctx.syntax.line_parser.parse(ctx._get_text(row))
-        return tbase.TablePos(row - ctx.first_table_row,
-                              line.field_num(col))
+        return tbase.TablePos(
+            row - ctx.first_table_row,
+            ctx.visual_field_num_at(row, col))
 
 
 class TableEditorIndentCellRows(CellRowsSelectionCommand,
@@ -542,7 +571,17 @@ class TableEditorSplitColumnDown(AbstractTableCommand):
         return rest_data.strip()
 
     def run_one_sel(self, edit, sel):
-        ctx = self.create_context(sel)
+        try:
+            ctx = self.create_context(sel)
+        except tbase.TableException as err:
+            sublime.status_message("Table Editor: {0}".format(err))
+            return sel
+        if (hasattr(ctx.table_driver, 'is_complete_grid') and
+                ctx.table_driver.is_complete_grid(ctx.table)):
+            sublime.status_message(
+                "Table Editor: Split column down is not available for "
+                "bordered grid tables")
+            return sel
         field_num = ctx.field_num
         row_num = ctx.row_num
         if (ctx.table[row_num].is_separator() or
@@ -550,16 +589,16 @@ class TableEditorSplitColumnDown(AbstractTableCommand):
             sublime.status_message("Table Editor: Split column is not "
                                    "permitted for separator or header "
                                    "separator line")
-            return self.table_pos_sel(ctx, ctx.table_pos)
+            return sel
         if row_num + 1 < len(ctx.table):
             if len(ctx.table[row_num + 1]) - 1 < field_num:
                 sublime.status_message("Table Editor: Split column is not "
                                        "permitted for short line")
-                return self.table_pos_sel(ctx, ctx.table_pos)
+                return sel
             elif ctx.table[row_num + 1][field_num].pseudo():
                 sublime.status_message("Table Editor: Split column is not "
                                        "permitted to colspan column")
-                return self.table_pos_sel(ctx, ctx.table_pos)
+                return sel
 
         (sel_row, sel_col) = self.view.rowcol(sel.begin())
         rest_data = self.remove_rest_line(edit, sel)
@@ -653,3 +692,21 @@ class TableEditorSetSyntax(sublime_plugin.TextCommand):
         self.view.settings().set("table_editor_syntax", syntax)
         sublime.status_message("Table Editor: set syntax to '{0}'"
                                .format(syntax))
+
+
+class TableEditorFilmCommand(sublime_plugin.WindowCommand):
+
+    def run(self):
+        try:
+            from .tests.table_plugin_test import TableEditorTestSuite
+        except (ImportError, ValueError):
+            from tests.table_plugin_test import TableEditorTestSuite
+
+        view = self.window.new_file()
+        view.set_scratch(True)
+        view.set_name("Sublime Table Editor Film")
+        view.settings().set("table_editor_border_style", "simple")
+        view.run_command(
+            "table_editor_enable_for_current_view",
+            {"prop": "enable_table_editor"})
+        TableEditorTestSuite(view).run()

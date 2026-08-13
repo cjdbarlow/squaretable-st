@@ -1,14 +1,15 @@
 import json
+from pathlib import Path
 import re
-import subprocess
-import sys
 import unittest
+import warnings
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 KEYMAPS = [
-    'Default (Linux).sublime-keymap',
-    'Default (OSX).sublime-keymap',
-    'Default (Windows).sublime-keymap',
+    PROJECT_ROOT / 'Default (Linux).sublime-keymap',
+    PROJECT_ROOT / 'Default (OSX).sublime-keymap',
+    PROJECT_ROOT / 'Default (Windows).sublime-keymap',
 ]
 
 CELL_COMMANDS = {
@@ -37,7 +38,8 @@ def context_value(binding, key):
 class PackageMetadataTest(unittest.TestCase):
 
     def test_command_palette_exposes_all_cell_commands(self):
-        entries = load_json_with_comments('Default.sublime-commands')
+        entries = load_json_with_comments(
+            PROJECT_ROOT / 'Default.sublime-commands')
         commands = {entry['command'] for entry in entries}
         self.assertTrue(CELL_COMMANDS <= commands)
 
@@ -61,7 +63,7 @@ class PackageMetadataTest(unittest.TestCase):
                     context_value(binding, 'table_editor_multiline_grid') is True
                     for binding in matches))
 
-    def test_tab_navigation_requires_an_empty_selection(self):
+    def test_grid_tab_navigation_requires_an_empty_selection(self):
         for path in KEYMAPS:
             bindings = load_json_with_comments(path)
             navigation = [binding for binding in bindings
@@ -70,29 +72,56 @@ class PackageMetadataTest(unittest.TestCase):
                               'table_editor_previous_field')]
             self.assertTrue(navigation)
             for binding in navigation:
+                if context_value(
+                        binding, 'table_editor_multiline_grid') is False:
+                    continue
                 self.assertIs(
                     True, context_value(binding, 'selection_empty'),
                     '{0}: {1}'.format(path, binding['command']))
 
-    def test_enter_navigation_requires_an_empty_selection(self):
+    def test_grid_enter_navigation_requires_an_empty_selection(self):
         for path in KEYMAPS:
             bindings = load_json_with_comments(path)
             navigation = [binding for binding in bindings
                           if binding['command'] == 'table_editor_next_row']
             self.assertTrue(navigation)
             for binding in navigation:
+                if context_value(
+                        binding, 'table_editor_multiline_grid') is False:
+                    continue
                 self.assertIs(
                     True, context_value(binding, 'selection_empty'), path)
 
+    def test_selected_legacy_navigation_remains_bound_outside_grid(self):
+        commands = {
+            'table_editor_next_field',
+            'table_editor_previous_field',
+            'table_editor_next_row',
+        }
+        for path in KEYMAPS:
+            bindings = load_json_with_comments(path)
+            for command in commands:
+                matches = [
+                    binding for binding in bindings
+                    if binding['command'] == command and
+                    context_value(binding, 'selection_empty') is False and
+                    context_value(binding,
+                                  'table_editor_multiline_grid') is False
+                ]
+                self.assertGreaterEqual(
+                    len(matches), 2,
+                    '{0}: selected {1}'.format(path, command))
+
     def test_plugin_compiles_without_syntax_warnings(self):
-        result = subprocess.run(
-            [sys.executable, '-W', 'error::SyntaxWarning', '-m', 'py_compile',
-             'table_plugin.py'],
-            capture_output=True, text=True)
-        self.assertEqual(0, result.returncode, result.stderr)
+        path = PROJECT_ROOT / 'table_plugin.py'
+        with open(path, encoding='utf-8') as stream:
+            source = stream.read()
+        with warnings.catch_warnings():
+            warnings.simplefilter('error', SyntaxWarning)
+            compile(source, str(path), 'exec')
 
     def test_preferences_menu_uses_squaretable_package_path(self):
-        menu = load_json_with_comments('Main.sublime-menu')
+        menu = load_json_with_comments(PROJECT_ROOT / 'Main.sublime-menu')
 
         def walk(items):
             for item in items:

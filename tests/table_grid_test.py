@@ -1,8 +1,13 @@
 import unittest
 
-import table_base as tbase
-import table_grid
-import table_lib
+try:
+    from .. import table_base as tbase
+    from .. import table_grid
+    from .. import table_lib
+except (ImportError, ValueError):
+    import table_base as tbase
+    import table_grid
+    import table_lib
 
 
 class GridTableTest(unittest.TestCase):
@@ -130,6 +135,284 @@ class GridOperationTest(unittest.TestCase):
         syntax = table_lib.pandoc_syntax()
         table = syntax.table_parser.parse_text(text)
         return table_grid.GridTable(table)
+
+
+class SpannedGridDriverTest(unittest.TestCase):
+
+    def test_align_strips_trailing_padding_without_losing_colspan(self):
+        syntax = table_lib.pandoc_syntax()
+        table = syntax.table_parser.parse_text(
+            "+---+---+   \n| A     |   \n+---+---+   ")
+
+        syntax.table_driver.editor_align(table, tbase.TablePos(1, 0))
+
+        grid = table_grid.GridTable(table)
+        self.assertIn((0, 0, 2, 1),
+                      [cell.bounds() for cell in grid.document.cells])
+        self.assertEqual("+---+---+\n| A     |\n+---+---+", table.render())
+
+    def test_insert_uses_source_geometry_and_preserves_rowspan(self):
+        syntax = table_lib.pandoc_syntax()
+        table = syntax.table_parser.parse_text("""\
++---+---+
+| A | B |
+|   +---+
+| C | D |
++---+---+""")
+
+        unused_message, position = syntax.table_driver.editor_insert_cell_row(
+            table, tbase.TablePos(1, 0))
+
+        self.assertEqual(tbase.TablePos(2, 0), position)
+        self.assertEqual("""\
++---+---+
+| A | B |
+|   |   |
+|   +---+
+| C | D |
++---+---+""", table.render())
+
+    def test_unsupported_legacy_mutation_rejects_before_span_loss(self):
+        syntax = table_lib.pandoc_syntax()
+        text = """\
++---+---+
+| A     |
++---+---+"""
+        table = syntax.table_parser.parse_text(text)
+
+        with self.assertRaises(tbase.TableException):
+            syntax.table_driver.editor_insert_single_hline(
+                table, tbase.TablePos(1, 0))
+
+        self.assertEqual(text, table.source_text)
+
+    def test_cursor_mapping_uses_rendered_grid_after_appending_row(self):
+        syntax = table_lib.pandoc_syntax()
+        table = syntax.table_parser.parse_text("""\
++---+
+| A |
++---+""")
+        unused_message, position = syntax.table_driver.editor_next_field(
+            table, tbase.TablePos(1, 0))
+
+        column = syntax.table_driver.get_cursor(table, position)
+
+        self.assertEqual(tbase.TablePos(3, 0), position)
+        self.assertEqual(2, column)
+
+
+class GridAlignmentTest(unittest.TestCase):
+
+    text = ("+---------+-------+\n"
+            "| Name    | Value |\n"
+            "+=========+=======+\n"
+            "| Thing   | 12    |\n"
+            "+---------+-------+")
+
+    def align(self, configuration=None, text=None):
+        syntax = table_lib.pandoc_syntax(configuration)
+        table = syntax.table_parser.parse_text(text or self.text)
+        syntax.table_driver.editor_align(table, tbase.TablePos(1, 0))
+        return table
+
+    def test_align_centers_headers_and_right_aligns_numbers(self):
+        table = self.align()
+
+        self.assertEqual(
+            "+---------+-------+\n"
+            "|  Name   | Value |\n"
+            "+=========+=======+\n"
+            "| Thing   |    12 |\n"
+            "+---------+-------+",
+            table.render())
+
+    def test_disabled_header_detection_keeps_headers_left_aligned(self):
+        configuration = tbase.TableConfiguration()
+        configuration.detect_header = False
+
+        table = self.align(configuration)
+
+        self.assertEqual("| Name    | Value |", table.render_lines()[1])
+        self.assertEqual("| Thing   | 12    |", table.render_lines()[3])
+
+    def test_disabled_number_alignment_keeps_numbers_left_aligned(self):
+        configuration = tbase.TableConfiguration()
+        configuration.align_number_right = False
+
+        table = self.align(configuration)
+
+        self.assertEqual("|  Name   | Value |", table.render_lines()[1])
+        self.assertEqual("| Thing   | 12    |", table.render_lines()[3])
+
+    def test_align_centers_colspan_header_without_changing_topology(self):
+        table = self.align(text=(
+            "+------+------+\n"
+            "| Title       |\n"
+            "+======+======+\n"
+            "| A    | 12   |\n"
+            "+------+------+"))
+
+        grid = table_grid.GridTable(table)
+        self.assertIn((0, 0, 2, 1),
+                      [cell.bounds() for cell in grid.document.cells])
+        self.assertEqual("|    Title    |", table.render_lines()[1])
+
+
+class GridColumnDriverTest(unittest.TestCase):
+
+    def setUp(self):
+        self.syntax = table_lib.pandoc_syntax()
+        self.driver = self.syntax.table_driver
+
+    def parse(self, text):
+        return self.syntax.table_parser.parse_text(text)
+
+    def test_moves_ordinary_atomic_column(self):
+        table = self.parse("""\
++---+---+
+| A | B |
++===+===+
+| C | D |
++---+---+""")
+
+        unused_message, position = self.driver.editor_move_column_right(
+            table, tbase.TablePos(1, 0))
+
+        self.assertEqual(tbase.TablePos(1, 1), position)
+        self.assertEqual("""\
++---+---+
+| B | A |
++===+===+
+| D | C |
++---+---+""", table.render())
+
+    def test_inserts_ordinary_atomic_column_before_caret(self):
+        table = self.parse("""\
++---+---+
+| A | B |
++---+---+""")
+
+        unused_message, position = self.driver.editor_insert_column(
+            table, tbase.TablePos(1, 1))
+
+        grid = table_grid.GridTable(table)
+        self.assertEqual(tbase.TablePos(1, 1), position)
+        self.assertEqual(['A', '', 'B'],
+                         [grid.cell_rows(0, field)[0]
+                          for field in range(3)])
+
+    def test_deletes_ordinary_atomic_column(self):
+        table = self.parse("""\
++---+---+
+| A | B |
++---+---+""")
+
+        unused_message, position = self.driver.editor_delete_column(
+            table, tbase.TablePos(1, 0))
+
+        self.assertEqual(tbase.TablePos(1, 0), position)
+        self.assertEqual("+---+\n| B |\n+---+", table.render())
+
+    def test_rejects_column_operation_touching_rowspan(self):
+        table = self.parse("""\
++---+---+
+| A | B |
+|   +---+
+| C | D |
++---+---+""")
+        before = table.render()
+
+        with self.assertRaises(tbase.TableException):
+            self.driver.editor_delete_column(table, tbase.TablePos(1, 0))
+
+        self.assertEqual(before, table.render())
+
+    def test_inserts_unaffected_column_beside_rowspan(self):
+        table = self.parse("""\
++---+---+
+| A | B |
+|   +---+
+| C | D |
++---+---+""")
+
+        self.driver.editor_insert_column(table, tbase.TablePos(1, 1))
+
+        grid = table_grid.GridTable(table)
+        self.assertIn((0, 0, 1, 2),
+                      [cell.bounds() for cell in grid.document.cells])
+        self.assertEqual(3, len(grid.document.column_widths))
+
+
+class GridSeparatorCaretTest(unittest.TestCase):
+
+    def setUp(self):
+        self.syntax = table_lib.pandoc_syntax()
+        self.driver = self.syntax.table_driver
+
+    def parse(self, text):
+        return self.syntax.table_parser.parse_text(text)
+
+    def test_align_from_top_separator_preserves_caret_row(self):
+        text = "+---+\n| A |\n+---+"
+        table = self.parse(text)
+
+        unused_message, position = self.driver.editor_align(
+            table, tbase.TablePos(0, 0))
+
+        self.assertEqual(tbase.TablePos(0, 0), position)
+        self.assertEqual(text, table.render())
+
+    def test_forward_navigation_from_internal_separator_uses_row_below(self):
+        table = self.parse("""\
++---+---+
+| A | B |
++---+---+
+| C | D |
++---+---+""")
+
+        unused_message, position = self.driver.editor_next_field(
+            table, tbase.TablePos(2, 0))
+
+        self.assertEqual(tbase.TablePos(3, 0), position)
+
+    def test_reverse_navigation_from_bottom_separator_uses_row_above(self):
+        table = self.parse("""\
++---+---+
+| A | B |
++---+---+""")
+
+        unused_message, position = self.driver.editor_previous_field(
+            table, tbase.TablePos(2, 0))
+
+        self.assertEqual(tbase.TablePos(1, 1), position)
+
+    def test_logical_insert_from_internal_separator_targets_row_below(self):
+        table = self.parse("""\
++---+
+| A |
++---+
+| B |
++---+""")
+
+        self.driver.editor_insert_row(table, tbase.TablePos(2, 0))
+
+        grid = table_grid.GridTable(table)
+        self.assertEqual(['A', '', 'B'],
+                         [grid.cell_rows(row, 0)[0]
+                          for row in range(3)])
+
+    def test_partial_separator_content_is_a_navigable_rowspan_slot(self):
+        table = self.parse("""\
++-------------+-------+
+|             | min   |
+| Temperature +-------+
+| 1961-1990   | mean  |
++-------------+-------+""")
+
+        unused_message, position = self.driver.editor_next_field(
+            table, tbase.TablePos(2, 0))
+
+        self.assertEqual(tbase.TablePos(3, 0), position)
 
 
 class GridCellInsertTest(GridOperationTest):
@@ -486,14 +769,15 @@ class GridLogicalRowDriverTest(GridOperationTest):
 
     def test_delete_removes_the_logical_rows_header_separator(self):
         table = self.parse_table("""\
-+--------+
-| Header |
-+========+
-| body   |
-+--------+""")
++---------------+
+| Header        |
++===============+
+| body          |
++---------------+""")
         self.driver.editor_insert_row(table, tbase.TablePos(1, 0))
-        table.rows[1][0].data = '     - nested'
-        table.pack()
+        table.source_text = table.render().replace(
+            '|               |', '|     - nested  |', 1)
+        table.clear_render_lines()
 
         self.driver.editor_kill_row(table, tbase.TablePos(3, 0))
 
@@ -634,3 +918,36 @@ class PandocPipeCompatibilityTest(unittest.TestCase):
 
         self.assertEqual("C", table.rows[0][0].data.strip())
         self.assertEqual(tbase.TablePos(1, 0), position)
+
+    def test_incomplete_grid_uses_existing_incremental_editing(self):
+        table = self.syntax.table_parser.parse_text("""\
++---+
+| A |""")
+
+        unused_message, position = self.driver.editor_next_row(
+            table, tbase.TablePos(1, 0))
+
+        self.assertEqual(tbase.TablePos(2, 0), position)
+        self.assertEqual(3, len(table.rows))
+
+    def test_pipe_table_honours_disabled_left_space_preservation(self):
+        configuration = tbase.TableConfiguration()
+        configuration.keep_space_left = False
+        syntax = table_lib.pandoc_syntax(configuration)
+        table = syntax.table_parser.parse_text(
+            "|   nested | x |\n| y | longer |")
+
+        self.assertEqual(
+            "| nested | x      |\n| y      | longer |",
+            table.render())
+
+    def test_restructured_text_honours_disabled_left_space_preservation(self):
+        configuration = tbase.TableConfiguration()
+        configuration.keep_space_left = False
+        syntax = table_lib.re_structured_text_syntax(configuration)
+        table = syntax.table_parser.parse_text(
+            "|   nested | x |\n| y | longer |")
+
+        self.assertEqual(
+            "| nested | x      |\n| y      | longer |",
+            table.render())

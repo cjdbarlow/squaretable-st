@@ -1,0 +1,1 @@
+"""SquareTable test package."""

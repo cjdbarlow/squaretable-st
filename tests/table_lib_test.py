@@ -13,8 +13,8 @@ import io
 from contextlib import redirect_stdout
 
 try:
-    from . import table_lib
-    from . import table_base as tbase
+    from .. import table_lib
+    from .. import table_base as tbase
 except (ImportError, ValueError):
     import table_lib
     import table_base as tbase
@@ -626,6 +626,36 @@ class ReStructuredTextSyntaxTest(BaseTableTest):
         t = self.syntax.table_parser.parse_text(unformatted)
         formatted = t.render()
         self.assert_table_equals(expected, formatted)
+
+
+class SourceTextTest(unittest.TestCase):
+
+    def test_parser_retains_exact_source_text(self):
+        text = "+---+\n| a |\n+---+"
+        table = table_lib.pandoc_syntax().table_parser.parse_text(text)
+
+        self.assertEqual(text, table.source_text)
+
+    def test_explicit_render_lines_override_normalized_rows(self):
+        table = table_lib.pandoc_syntax().table_parser.parse_text(
+            "+---+\n| a |\n+---+")
+
+        table.set_render_lines(["one", "two"])
+        self.assertEqual(["one", "two"], table.render_lines())
+        table.clear_render_lines()
+        self.assertNotEqual(["one", "two"], table.render_lines())
+
+    def test_pack_invalidates_stale_source_and_render_override(self):
+        table = table_lib.simple_syntax().table_parser.parse_text(
+            "| old |")
+        table.set_render_lines(["stale"])
+        table.rows[0][0].data = "fresh"
+
+        table.pack()
+
+        self.assertIsNone(table.source_text)
+        self.assertIn("fresh", table.render())
+        self.assertNotEqual("stale", table.render())
 
 
 if __name__ == '__main__':
