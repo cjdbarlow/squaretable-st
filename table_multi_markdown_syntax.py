@@ -17,7 +17,7 @@ import re
 try:
     from . import table_base as tbase
     from . import table_line_parser as tparser
-except ValueError:
+except (ImportError, ValueError):
     import table_base as tbase
     import table_line_parser as tparser
 
@@ -31,7 +31,7 @@ class MultiMarkdownTableSyntax(tbase.TableSyntax):
     def __init__(self, table_configuration):
         tbase.TableSyntax.__init__(self, "Multi Markdown", table_configuration)
 
-        self.line_parser = tparser.LineParserPlus("(?:(?:\|\|+)|(?:\|))")
+        self.line_parser = tparser.LineParserPlus(r"(?:(?:\|\|+)|(?:\|))")
         self.table_parser = MultiMarkdownTableParser(self)
         self.table_driver = MultiMarkdownTableDriver(self)
 

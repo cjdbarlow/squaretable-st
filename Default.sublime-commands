@@ -57,5 +57,23 @@
       "command": "table_editor_set_syntax", "args": {"syntax": "reStructuredText"} },
 
     { "caption": "Table Editor: Set table syntax 'Textile' for current view", 
-      "command": "table_editor_set_syntax", "args": {"syntax": "Textile"} }
+      "command": "table_editor_set_syntax", "args": {"syntax": "Textile"} },
+
+    { "caption": "Table Editor: Insert row in current cell",
+      "command": "table_editor_insert_cell_row" },
+
+    { "caption": "Table Editor: Delete row from current cell",
+      "command": "table_editor_delete_cell_row" },
+
+    { "caption": "Table Editor: Move row up in current cell",
+      "command": "table_editor_move_cell_row_up" },
+
+    { "caption": "Table Editor: Move row down in current cell",
+      "command": "table_editor_move_cell_row_down" },
+
+    { "caption": "Table Editor: Indent selected rows in current cell",
+      "command": "table_editor_indent_cell_rows" },
+
+    { "caption": "Table Editor: Outdent selected rows in current cell",
+      "command": "table_editor_outdent_cell_rows" }
 ]

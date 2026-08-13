@@ -1,5 +1,47 @@
 [
     // Begin Normal Row
+    { "keys": ["ctrl+alt+shift+down"], "command": "table_editor_insert_cell_row", "context":
+        [
+            { "key": "setting.enable_table_editor", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "table_editor_multiline_grid", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true }
+        ]
+    },
+    { "keys": ["ctrl+alt+shift+up"], "command": "table_editor_delete_cell_row", "context":
+        [
+            { "key": "setting.enable_table_editor", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "table_editor_multiline_grid", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true }
+        ]
+    },
+    { "keys": ["ctrl+alt+up"], "command": "table_editor_move_cell_row_up", "context":
+        [
+            { "key": "setting.enable_table_editor", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "table_editor_multiline_grid", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true }
+        ]
+    },
+    { "keys": ["ctrl+alt+down"], "command": "table_editor_move_cell_row_down", "context":
+        [
+            { "key": "setting.enable_table_editor", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "table_editor_multiline_grid", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true }
+        ]
+    },
+    { "keys": ["tab"], "command": "table_editor_indent_cell_rows", "context":
+        [
+            { "key": "setting.enable_table_editor", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "table_editor_multiline_grid", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "selection_empty", "operator": "equal", "operand": false, "match_all": true }
+        ]
+    },
+    { "keys": ["shift+tab"], "command": "table_editor_outdent_cell_rows", "context":
+        [
+            { "key": "setting.enable_table_editor", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "table_editor_multiline_grid", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "selection_empty", "operator": "equal", "operand": false, "match_all": true }
+        ]
+    },
     { "keys": ["ctrl+shift+a"], "command": "table_editor_align", "context":
         [
             { "key": "setting.enable_table_editor", "operator": "equal", "operand": true, "match_all": true },
@@ -10,6 +52,7 @@
     { "keys": ["tab"], "command": "table_editor_next_field", "context":
         [
             { "key": "setting.enable_table_editor", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
             { "key": "preceding_text", "operator": "regex_contains", "operand": "^\\s*\\|", "match_all": true },
             { "key": "following_text", "operator": "regex_contains", "operand": "$", "match_all": true }
         ]
@@ -17,6 +60,7 @@
     { "keys": ["shift+tab"], "command": "table_editor_previous_field", "context":
         [
             { "key": "setting.enable_table_editor", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
             { "key": "preceding_text", "operator": "regex_contains", "operand": "^\\s*\\|", "match_all": true },
             { "key": "following_text", "operator": "regex_contains", "operand": "$", "match_all": true }
         ]
@@ -24,6 +68,7 @@
     { "keys": ["enter"], "command": "table_editor_next_row", "context":
         [
             { "key": "setting.enable_table_editor", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
             { "key": "preceding_text", "operator": "regex_contains", "operand": "^\\s*\\|", "match_all": true },
             { "key": "following_text", "operator": "regex_contains", "operand": "\\|", "match_all": true }
         ]
@@ -132,6 +177,7 @@
     { "keys": ["tab"], "command": "table_editor_next_field", "context":
         [
             { "key": "setting.enable_table_editor", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
             { "key": "preceding_text", "operator": "regex_match", "operand": "^\\s*\\+([\\+\\|\\-\\=]|\\s)*", "match_all": true },
             { "key": "following_text", "operator": "regex_match", "operand": "([\\+\\|\\-\\=]|\\s)*$", "match_all": true },
             { "key": "following_text", "operator": "regex_contains", "operand": "[\\+\\|]\\s*$", "match_all": true }
@@ -140,6 +186,7 @@
     { "keys": ["shift+tab"], "command": "table_editor_previous_field", "context":
         [
             { "key": "setting.enable_table_editor", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
             { "key": "preceding_text", "operator": "regex_match", "operand": "^\\s*\\+([\\+\\|\\-\\=]|\\s)*", "match_all": true },
             { "key": "following_text", "operator": "regex_match", "operand": "([\\+\\|\\-\\=]|\\s)*$", "match_all": true },
             { "key": "following_text", "operator": "regex_contains", "operand": "[\\+\\|]\\s*$", "match_all": true }
@@ -148,6 +195,7 @@
     { "keys": ["enter"], "command": "table_editor_next_row", "context":
         [
             { "key": "setting.enable_table_editor", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
             { "key": "preceding_text", "operator": "regex_match", "operand": "^\\s*\\+([\\+\\|\\-\\=]|\\s)*", "match_all": true },
             { "key": "following_text", "operator": "regex_match", "operand": "([\\+\\|\\-\\=]|\\s)*$", "match_all": true },
             { "key": "following_text", "operator": "regex_contains", "operand": "[\\+\\|]\\s*$", "match_all": true }

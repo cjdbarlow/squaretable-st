@@ -9,11 +9,13 @@
 
 import unittest
 import difflib
+import io
+from contextlib import redirect_stdout
 
 try:
     from . import table_lib
     from . import table_base as tbase
-except ValueError:
+except (ImportError, ValueError):
     import table_lib
     import table_base as tbase
 
@@ -490,7 +492,11 @@ class TextileSyntaxTest(BaseTableTest):
         self.assertEqual(tbase.TablePos(1, 3), d.visual_to_internal_index(t, tbase.TablePos(1, 2)))
         self.assertEqual(tbase.TablePos(1, 5), d.visual_to_internal_index(t, tbase.TablePos(1, 3)))
 
-        self.assertEqual(tbase.TablePos(1, 5), d.visual_to_internal_index(t, tbase.TablePos(1, 1000)))
+        output = io.StringIO()
+        with redirect_stdout(output):
+            result = d.visual_to_internal_index(t, tbase.TablePos(1, 1000))
+        self.assertEqual(tbase.TablePos(1, 5), result)
+        self.assertEqual('', output.getvalue())
 
         # test trivial
         for col in range(len(t[0])):

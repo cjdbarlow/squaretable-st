@@ -93,9 +93,9 @@ class LineParserPlus:
     def __init__(self, border_pattern):
         self.plus_line_parser = LineParser("(?:[+|])")
 
-        self.plus_line_pattern = re.compile("^\s*[+]")
-        self.single_hline_pattern = re.compile('^\s*[|+]\s*-[\s|+-]+$')
-        self.double_hline_pattern = re.compile('^\s*[|+]\s*=[\s|+=]+$')
+        self.plus_line_pattern = re.compile(r"^\s*[+]")
+        self.single_hline_pattern = re.compile(r'^\s*[|+]\s*-[\s|+-]+$')
+        self.double_hline_pattern = re.compile(r'^\s*[|+]\s*=[\s|+=]+$')
 
         self.data_line_parser = LineParser(border_pattern)
 
@@ -106,4 +106,3 @@ class LineParserPlus:
             return self.plus_line_parser.parse(line_text)
         else:
             return self.data_line_parser.parse(line_text)
-

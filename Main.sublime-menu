@@ -12,18 +12,18 @@
                 "children":
                 [
                     {
-                        "caption": "Table Editor",
+                        "caption": "SquareTable",
                         "children":
                         [
                             {
                                 "command": "open_file",
-                                "args": {"file": "${packages}/Table Editor/README.md"},
+                                "args": {"file": "${packages}/SquareTable/README.md"},
                                 "caption": "README"
                             },
                             {
                                 "command": "open_file",
                                 "args": {
-                                    "file": "${packages}/Table Editor/Default (OSX).sublime-keymap",
+                                    "file": "${packages}/SquareTable/Default (OSX).sublime-keymap",
                                     "platform": "OSX"
                                 },
                                 "caption": "Key Bindings – Default"
@@ -31,7 +31,7 @@
                             {
                                 "command": "open_file",
                                 "args": {
-                                    "file": "${packages}/Table Editor/Default (Linux).sublime-keymap",
+                                    "file": "${packages}/SquareTable/Default (Linux).sublime-keymap",
                                     "platform": "Linux"
                                 },
                                 "caption": "Key Bindings – Default"
@@ -39,7 +39,7 @@
                             {
                                 "command": "open_file",
                                 "args": {
-                                    "file": "${packages}/Table Editor/Default (Windows).sublime-keymap",
+                                    "file": "${packages}/SquareTable/Default (Windows).sublime-keymap",
                                     "platform": "Windows"
                                 },
                                 "caption": "Key Bindings – Default"

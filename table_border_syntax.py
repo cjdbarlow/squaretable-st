@@ -15,8 +15,16 @@ import re
 
 try:
     from . import table_base as tbase
-except ValueError:
+except (ImportError, ValueError):
     import table_base as tbase
+
+
+def is_grid_table(table):
+    if (not table.rows or
+            not isinstance(table.rows[0], SeparatorRow) or
+            not table.rows[0].columns):
+        return False
+    return table.rows[0].columns[0].left_border_text.strip() == '+'
 
 
 class SeparatorRow(tbase.Row):
@@ -34,7 +42,7 @@ class SeparatorRow(tbase.Row):
         return SeparatorColumn(self, self.separator)
 
     def is_header_separator(self):
-        return True
+        return self.syntax.is_header_separator(self)
 
     def is_separator(self):
         return True
@@ -107,7 +115,11 @@ class BorderTableParser(tbase.BaseTableParser):
         return True
 
     def create_row(self, table, line):
-        if self._is_single_row_separator(line.str_cols()):
+        grid_data = (is_grid_table(table) and line.cells and
+                     line.cells[0].left_border_text.strip() != '+')
+        if grid_data:
+            row = self.create_data_row(table, line)
+        elif self._is_single_row_separator(line.str_cols()):
             row = SeparatorRow(table, '-')
         elif self._is_double_row_separator(line.str_cols()):
             row = SeparatorRow(table, '=')

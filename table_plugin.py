@@ -14,9 +14,83 @@ import re
 try:
     from . import table_lib as tlib
     from . import table_base as tbase
-except ValueError:
+except (ImportError, ValueError):
     import table_lib as tlib
     import table_base as tbase
+
+
+GRID_SYNTAX_NAMES = ('Pandoc', 'reStructuredText')
+GRID_BORDER_RE = re.compile(r'^\s*\+(?:[-=]+\+)+\s*$')
+GRID_ROW_RE = re.compile(r'^\s*(?:\|.*\||\+[-=+]+)\s*$')
+
+
+def auto_detect_syntax_name(view):
+    view_syntax = view.settings().get('syntax') or ''
+    resource_name = view_syntax.rsplit('/', 1)[-1].split('.', 1)[0]
+    if resource_name in ('MultiMarkdown', 'Markdown'):
+        return "MultiMarkdown"
+    elif resource_name == 'Textile':
+        return "Textile"
+    elif resource_name == 'reStructuredText':
+        return "reStructuredText"
+    return "Simple"
+
+
+def configured_syntax_name(view):
+    if view.settings().has("table_editor_syntax"):
+        return view.settings().get("table_editor_syntax")
+    return auto_detect_syntax_name(view)
+
+
+def syntax_settings_name(syntax):
+    match = re.search(
+        r'([^/]+?)(?:\.tmLanguage|\.sublime-syntax)$', syntax or '')
+    return match.group(1) + '.sublime-settings' if match else None
+
+
+def _is_grid_content(view, point):
+    line = view.substr(view.line(point))
+    if re.match(r'^\s*\|.*\|\s*$', line) is None:
+        return False
+
+    row = view.rowcol(point)[0]
+    first_row = row
+    while first_row > 0 and _is_grid_row(view, first_row - 1):
+        first_row -= 1
+
+    last_row = row
+    final_row = view.rowcol(view.size())[0]
+    while last_row < final_row and _is_grid_row(view, last_row + 1):
+        last_row += 1
+
+    return any(GRID_BORDER_RE.match(_row_text(view, row_num))
+               for row_num in range(first_row, last_row + 1))
+
+
+def _is_grid_row(view, row):
+    return GRID_ROW_RE.match(_row_text(view, row)) is not None
+
+
+def _row_text(view, row):
+    return view.substr(view.line(view.text_point(row, 0)))
+
+
+class TableEditorContextListener(sublime_plugin.EventListener):
+
+    def on_query_context(self, view, key, operator, operand, match_all):
+        if key != 'table_editor_multiline_grid':
+            return None
+
+        enabled = configured_syntax_name(view) in GRID_SYNTAX_NAMES
+        for selection in view.sel():
+            end = max(selection.begin(), selection.end() - 1)
+            enabled = (enabled and
+                       _is_grid_content(view, selection.begin()) and
+                       _is_grid_content(view, end))
+
+        if operator == sublime.OP_NOT_EQUAL:
+            return enabled != operand
+        return enabled == operand
 
 
 class TableContext:
@@ -81,10 +155,7 @@ class TableContext:
 class AbstractTableCommand(sublime_plugin.TextCommand):
 
     def detect_syntax(self):
-        if self.view.settings().has("table_editor_syntax"):
-            syntax_name = self.view.settings().get("table_editor_syntax")
-        else:
-            syntax_name = self.auto_detect_syntax_name()
+        syntax_name = configured_syntax_name(self.view)
 
         table_configuration = tbase.TableConfiguration()
 
@@ -119,16 +190,7 @@ class AbstractTableCommand(sublime_plugin.TextCommand):
         return syntax
 
     def auto_detect_syntax_name(self):
-        view_syntax = self.view.settings().get('syntax')
-        if (view_syntax == 'Packages/Markdown/MultiMarkdown.tmLanguage' or
-                view_syntax == 'Packages/Markdown/Markdown.tmLanguage'):
-            return "MultiMarkdown"
-        elif view_syntax == 'Packages/Textile/Textile.tmLanguage':
-            return "Textile"
-        elif (view_syntax == 'Packages/RestructuredText/reStructuredText.tmLanguage'):
-            return "reStructuredText"
-        else:
-            return "Simple"
+        return auto_detect_syntax_name(self.view)
 
     def merge(self, edit, ctx):
         table = ctx.table
@@ -151,8 +213,8 @@ class AbstractTableCommand(sublime_plugin.TextCommand):
                 row = row + 1
         #case 2: some lines deleted
         elif len(rows) > len(new_lines):
-            for row in rows[len(new_lines):]:
-                region = self.view.line(self.view.text_point(row, 0))
+            for row in reversed(rows[len(new_lines):]):
+                region = self.view.full_line(self.view.text_point(row, 0))
                 self.view.erase(edit, region)
 
     def create_context(self, sel):
@@ -237,6 +299,18 @@ class TableEditorNextRow(AbstractTableCommand):
     Creates a new row if necessary.
     At the beginning or end of a line, enter still does new line.
     """
+    def run(self, edit):
+        selections = list(self.view.sel())
+        uses_grid = (configured_syntax_name(self.view) in GRID_SYNTAX_NAMES and
+                     any(_is_grid_content(self.view, selection.begin())
+                         for selection in selections))
+        if (uses_grid and
+                (len(selections) != 1 or not selections[0].empty())):
+            sublime.status_message(
+                "Table Editor: Multiline grid editing requires one caret")
+            return
+        AbstractTableCommand.run(self, edit)
+
     def run_operation(self, ctx):
         return ctx.table_driver.editor_next_row(ctx.table, ctx.table_pos)
 
@@ -318,6 +392,109 @@ class TableEditorMoveRowDown(AbstractTableCommand):
                                                      ctx.table_pos)
 
 
+def multiline_grid_driver(ctx):
+    if not getattr(ctx.table_driver, 'supports_multiline_grid', False):
+        raise tbase.TableException(
+            "Multiline cell editing requires a bordered grid table")
+    return ctx.table_driver
+
+
+class SingleCaretGridCommand(AbstractTableCommand):
+
+    def run(self, edit):
+        selections = list(self.view.sel())
+        if len(selections) != 1 or not selections[0].empty():
+            sublime.status_message(
+                "Table Editor: Multiline grid editing requires one caret")
+            return
+        AbstractTableCommand.run(self, edit)
+
+
+class TableEditorInsertCellRow(SingleCaretGridCommand):
+
+    def run_operation(self, ctx):
+        return multiline_grid_driver(ctx).editor_insert_cell_row(
+            ctx.table, ctx.table_pos)
+
+
+class TableEditorDeleteCellRow(SingleCaretGridCommand):
+
+    def run_operation(self, ctx):
+        return multiline_grid_driver(ctx).editor_delete_cell_row(
+            ctx.table, ctx.table_pos)
+
+
+class TableEditorMoveCellRowUp(SingleCaretGridCommand):
+
+    def run_operation(self, ctx):
+        return multiline_grid_driver(ctx).editor_move_cell_row_up(
+            ctx.table, ctx.table_pos)
+
+
+class TableEditorMoveCellRowDown(SingleCaretGridCommand):
+
+    def run_operation(self, ctx):
+        return multiline_grid_driver(ctx).editor_move_cell_row_down(
+            ctx.table, ctx.table_pos)
+
+
+class CellRowsSelectionCommand(object):
+
+    outdent = False
+
+    def run(self, edit):
+        selections = list(self.view.sel())
+        if len(selections) != 1 or selections[0].empty():
+            sublime.status_message(
+                "Table Editor: Select rows in one grid-table cell")
+            return
+
+        selection = selections[0]
+        ctx = self.create_context(sublime.Region(selection.begin(),
+                                                 selection.begin()))
+        try:
+            driver = multiline_grid_driver(ctx)
+            start = self._table_pos(ctx, selection.begin())
+            end = self._table_pos(ctx, selection.end() - 1)
+            tab_size = int(self.view.settings().get('tab_size', 4))
+            if self.outdent:
+                msg, table_pos = driver.editor_outdent_cell_rows(
+                    ctx.table, start, end, tab_size)
+            else:
+                use_spaces = self.view.settings().get(
+                    'translate_tabs_to_spaces', True)
+                indent = ' ' * tab_size if use_spaces else '\t'
+                msg, table_pos = driver.editor_indent_cell_rows(
+                    ctx.table, start, end, indent)
+            self.merge(edit, ctx)
+            new_selection = self.table_pos_sel(ctx, table_pos)
+            self.view.sel().clear()
+            self.view.sel().add(new_selection)
+            self.view.show(new_selection, False)
+            sublime.status_message("Table Editor: {0}".format(msg))
+        except tbase.TableException as err:
+            sublime.status_message("Table Editor: {0}".format(err))
+
+    def _table_pos(self, ctx, point):
+        row, col = self.view.rowcol(point)
+        tbase.check_condition(
+            ctx.first_table_row <= row <= ctx.last_table_row,
+            "Selection must stay within one table")
+        line = ctx.syntax.line_parser.parse(ctx._get_text(row))
+        return tbase.TablePos(row - ctx.first_table_row,
+                              line.field_num(col))
+
+
+class TableEditorIndentCellRows(CellRowsSelectionCommand,
+                                AbstractTableCommand):
+    pass
+
+
+class TableEditorOutdentCellRows(CellRowsSelectionCommand,
+                                 AbstractTableCommand):
+    outdent = True
+
+
 class TableEditorInsertSingleHline(AbstractTableCommand):
     """
     Key: ctrl+k,-
@@ -357,7 +534,7 @@ class TableEditorSplitColumnDown(AbstractTableCommand):
     or if next line is hline
     """
     def remove_rest_line(self, edit, sel):
-        end_region = self.view.find("\|",
+        end_region = self.view.find(r"\|",
                                     sel.begin())
         rest_region = sublime.Region(sel.begin(), end_region.begin())
         rest_data = self.view.substr(rest_region)
@@ -450,27 +627,23 @@ class TableEditorEnableForCurrentView(sublime_plugin.TextCommand):
 class TableEditorDisableForCurrentSyntax(sublime_plugin.TextCommand):
 
     def run(self, edit):
-        syntax = self.view.settings().get('syntax')
-        if syntax is not None:
-            m = re.search("([^/]+)[.]tmLanguage$", syntax)
-            if m:
-                base_name = m.group(1) + ".sublime-settings"
-                settings = sublime.load_settings(base_name)
-                settings.erase("enable_table_editor")
-                sublime.save_settings(base_name)
+        base_name = syntax_settings_name(
+            self.view.settings().get('syntax'))
+        if base_name:
+            settings = sublime.load_settings(base_name)
+            settings.erase("enable_table_editor")
+            sublime.save_settings(base_name)
 
 
 class TableEditorEnableForCurrentSyntax(sublime_plugin.TextCommand):
 
     def run(self, edit):
-        syntax = self.view.settings().get('syntax')
-        if syntax is not None:
-            m = re.search("([^/]+)[.]tmLanguage$", syntax)
-            if m:
-                base_name = m.group(1) + ".sublime-settings"
-                settings = sublime.load_settings(base_name)
-                settings.set("enable_table_editor", True)
-                sublime.save_settings(base_name)
+        base_name = syntax_settings_name(
+            self.view.settings().get('syntax'))
+        if base_name:
+            settings = sublime.load_settings(base_name)
+            settings.set("enable_table_editor", True)
+            sublime.save_settings(base_name)
 
 
 class TableEditorSetSyntax(sublime_plugin.TextCommand):

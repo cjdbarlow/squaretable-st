@@ -20,7 +20,7 @@ try:
     from . import table_multi_markdown_syntax as markdown
     from . import table_re_structured_text_syntax as re_structured_text
     from . import table_textile_syntax as textile
-except ValueError:
+except (ImportError, ValueError):
     import table_base as tbase
     import table_simple_syntax as simple
     import table_emacs_org_mode_syntax as emacs

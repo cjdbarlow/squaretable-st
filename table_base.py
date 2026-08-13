@@ -17,7 +17,7 @@ import csv
 try:
     from . import table_line_parser as tparser
     from .widechar_support import wlen, wcount
-except ValueError:
+except (ImportError, ValueError):
     import table_line_parser as tparser
     from widechar_support import wlen, wcount
 
@@ -50,6 +50,9 @@ class TableSyntax:
         # Must be set in sublass constructor
         self.table_parser = None
         self.table_driver = None
+
+    def is_header_separator(self, unused_row):
+        return True
 
 
 
@@ -313,6 +316,12 @@ class TextTable:
             for col_ind, column in enumerate(row.columns):
                 rowspans[col_ind] = rowspans[col_ind] + column.rowspan - 1
 
+        # Header state affects minimum width when leading space is preserved.
+        for row in self.rows:
+            if row.is_data():
+                for column in row.columns:
+                    column.header = False
+
         #calculate column lens
         col_lens = [0] * column_count
         for row in self.rows:
@@ -496,8 +505,6 @@ class TableDriver:
                 internal_pos.field_num = col_ind
             if count_visual == visual_pos.field_num + 1:
                 break
-        else:
-            print("WARNING: Visual Index Not found")
         return internal_pos
 
     def get_cursor(self, table, visual_pos):

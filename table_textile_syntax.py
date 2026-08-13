@@ -17,7 +17,7 @@ import re
 try:
     from . import table_base as tbase
     from .widechar_support import wlen, wcount
-except ValueError:
+except (ImportError, ValueError):
     import table_base as tbase
     from widechar_support import wlen, wcount
 

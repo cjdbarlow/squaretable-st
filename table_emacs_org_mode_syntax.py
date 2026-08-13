@@ -13,7 +13,7 @@ from __future__ import division
 try:
     from . import table_base as tbase
     from . import table_border_syntax as tborder
-except ValueError:
+except (ImportError, ValueError):
     import table_base as tbase
     import table_border_syntax as tborder
 
