@@ -52,6 +52,14 @@ class PackageMetadataTest(unittest.TestCase):
             entry['caption'].startswith('SquareTable: ')
             for entry in entries))
 
+    def test_command_palette_omits_demo_film(self):
+        entries = load_json_with_comments(
+            PROJECT_ROOT / 'Default.sublime-commands')
+
+        self.assertNotIn(
+            'table_editor_film',
+            {entry['command'] for entry in entries})
+
     def test_each_platform_binds_cell_commands(self):
         expected = {
             ('ctrl+alt+shift+down',): 'table_editor_insert_cell_row',

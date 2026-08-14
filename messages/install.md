@@ -29,14 +29,12 @@ editor for edit text tables.
 - temporary disable/enable table editor for current view
 - customize table syntax with settings
 - support CJK : Chinese, Japanese, Korean(alpha status)
-- show demo film in scratch view
 
 
 For more information see
 
 * Sublime Text - Select Preferences->Package Settings->Table Editor->README
 * Online - https://github.com/vkocubinsky/SublimeTableEditor
-
 
 
 

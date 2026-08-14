@@ -118,11 +118,6 @@ class SyntaxView(object):
 
 class SyntaxDetectionTest(unittest.TestCase):
 
-    def test_plugin_owns_film_command_entrypoint(self):
-        plugin = load_plugin()
-
-        self.assertTrue(hasattr(plugin, 'TableEditorFilmCommand'))
-
     def test_detects_st4_restructured_text_resource(self):
         plugin = load_plugin()
         view = SyntaxView(

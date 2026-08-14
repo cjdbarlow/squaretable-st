@@ -38,9 +38,6 @@
     { "caption": "SquareTable: Disable for current syntax",
       "command": "table_editor_disable_for_current_syntax"},
 
-    { "caption": "SquareTable: Show demo film in new scratch view",
-      "command": "table_editor_film" },
-
     { "caption": "SquareTable: Set table syntax 'Simple' for current view",
       "command": "table_editor_set_syntax", "args": {"syntax": "Simple"} },
 

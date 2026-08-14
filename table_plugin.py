@@ -692,21 +692,3 @@ class TableEditorSetSyntax(sublime_plugin.TextCommand):
         self.view.settings().set("table_editor_syntax", syntax)
         sublime.status_message("SquareTable: set syntax to '{0}'"
                                .format(syntax))
-
-
-class TableEditorFilmCommand(sublime_plugin.WindowCommand):
-
-    def run(self):
-        try:
-            from .tests.table_plugin_test import TableEditorTestSuite
-        except (ImportError, ValueError):
-            from tests.table_plugin_test import TableEditorTestSuite
-
-        view = self.window.new_file()
-        view.set_scratch(True)
-        view.set_name("SquareTable Film")
-        view.settings().set("table_editor_border_style", "simple")
-        view.run_command(
-            "table_editor_enable_for_current_view",
-            {"prop": "enable_table_editor"})
-        TableEditorTestSuite(view).run()

@@ -192,7 +192,7 @@ For example:
 
 The command palette can enable or disable SquareTable, leading-space preservation, numeric alignment and header detection for the current view.
 
-## CSV, CJK and demo
+## CSV and CJK
 
 ### CSV conversion
 
