@@ -123,17 +123,6 @@ This table contains both forms:
 |   +---+
 | C | D |
 +---+---+
-
-+---+-----+
-| Title   |
-+===+=====+
-| A | B   |
-|   +-----+
-| C | D   |
-|   | sdf |
-+--------+
-|        |
-+--------+
 ```
 
 `Title` spans both columns. The left body cell contains `A` and `C` across both bands; `B` and `D` remain separate.

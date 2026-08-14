@@ -255,10 +255,10 @@ class AbstractTableCommand(sublime_plugin.TextCommand):
             ctx = self.create_context(sel)
             msg, table_pos = self.run_operation(ctx)
             self.merge(edit, ctx)
-            sublime.status_message("Table Editor: {0}".format(msg))
+            sublime.status_message("SquareTable: {0}".format(msg))
             return self.table_pos_sel(ctx, table_pos)
         except tbase.TableException as err:
-            sublime.status_message("Table Editor: {0}".format(err))
+            sublime.status_message("SquareTable: {0}".format(err))
             return sel
 
     def visual_field_sel(self, ctx, row_num, visual_field_num):
@@ -320,7 +320,7 @@ def reject_unsafe_grid_selections(view):
     if (uses_grid and
             (len(selections) != 1 or not selections[0].empty())):
         sublime.status_message(
-            "Table Editor: Bordered grid editing requires one caret")
+            "SquareTable: Bordered grid editing requires one caret")
         return True
     return False
 
@@ -434,7 +434,7 @@ class SingleCaretGridCommand(AbstractTableCommand):
         selections = list(self.view.sel())
         if len(selections) != 1 or not selections[0].empty():
             sublime.status_message(
-                "Table Editor: Multiline grid editing requires one caret")
+                "SquareTable: Multiline grid editing requires one caret")
             return
         AbstractTableCommand.run(self, edit)
 
@@ -475,7 +475,7 @@ class CellRowsSelectionCommand(object):
         selections = list(self.view.sel())
         if len(selections) != 1 or selections[0].empty():
             sublime.status_message(
-                "Table Editor: Select rows in one grid-table cell")
+                "SquareTable: Select rows in one grid-table cell")
             return
 
         selection = selections[0]
@@ -500,9 +500,9 @@ class CellRowsSelectionCommand(object):
             self.view.sel().clear()
             self.view.sel().add(new_selection)
             self.view.show(new_selection, False)
-            sublime.status_message("Table Editor: {0}".format(msg))
+            sublime.status_message("SquareTable: {0}".format(msg))
         except tbase.TableException as err:
-            sublime.status_message("Table Editor: {0}".format(err))
+            sublime.status_message("SquareTable: {0}".format(err))
 
     def _table_pos(self, ctx, point):
         row, col = self.view.rowcol(point)
@@ -574,29 +574,29 @@ class TableEditorSplitColumnDown(AbstractTableCommand):
         try:
             ctx = self.create_context(sel)
         except tbase.TableException as err:
-            sublime.status_message("Table Editor: {0}".format(err))
+            sublime.status_message("SquareTable: {0}".format(err))
             return sel
         if (hasattr(ctx.table_driver, 'is_complete_grid') and
                 ctx.table_driver.is_complete_grid(ctx.table)):
             sublime.status_message(
-                "Table Editor: Split column down is not available for "
+                "SquareTable: Split column down is not available for "
                 "bordered grid tables")
             return sel
         field_num = ctx.field_num
         row_num = ctx.row_num
         if (ctx.table[row_num].is_separator() or
                 ctx.table[row_num].is_header_separator()):
-            sublime.status_message("Table Editor: Split column is not "
+            sublime.status_message("SquareTable: Split column is not "
                                    "permitted for separator or header "
                                    "separator line")
             return sel
         if row_num + 1 < len(ctx.table):
             if len(ctx.table[row_num + 1]) - 1 < field_num:
-                sublime.status_message("Table Editor: Split column is not "
+                sublime.status_message("SquareTable: Split column is not "
                                        "permitted for short line")
                 return sel
             elif ctx.table[row_num + 1][field_num].pseudo():
-                sublime.status_message("Table Editor: Split column is not "
+                sublime.status_message("SquareTable: Split column is not "
                                        "permitted to colspan column")
                 return sel
 
@@ -615,7 +615,7 @@ class TableEditorSplitColumnDown(AbstractTableCommand):
         ctx.table[row_num][field_num].data = rest_data + " " + ctx.table[row_num][field_num].data.strip()
         ctx.table.pack()
         self.merge(edit, ctx)
-        sublime.status_message("Table Editor: Column splitted down")
+        sublime.status_message("SquareTable: Column splitted down")
         return self.field_sel(ctx, row_num, field_num)
 
 
@@ -647,7 +647,7 @@ class TableEditorCsvToTable(AbstractTableCommand):
             first_row = self.view.rowcol(sel.begin())[0]
 
             pt = self.view.text_point(first_row, syntax.table_driver.get_cursor(table, tbase.TablePos(0, 0)))
-            sublime.status_message("Table Editor: Table created from CSV")
+            sublime.status_message("SquareTable: Table created from CSV")
             return sublime.Region(pt, pt)
 
 
@@ -690,7 +690,7 @@ class TableEditorSetSyntax(sublime_plugin.TextCommand):
     def run(self, edit, syntax):
         self.view.settings().set("enable_table_editor", True)
         self.view.settings().set("table_editor_syntax", syntax)
-        sublime.status_message("Table Editor: set syntax to '{0}'"
+        sublime.status_message("SquareTable: set syntax to '{0}'"
                                .format(syntax))
 
 
@@ -704,7 +704,7 @@ class TableEditorFilmCommand(sublime_plugin.WindowCommand):
 
         view = self.window.new_file()
         view.set_scratch(True)
-        view.set_name("Sublime Table Editor Film")
+        view.set_name("SquareTable Film")
         view.settings().set("table_editor_border_style", "simple")
         view.run_command(
             "table_editor_enable_for_current_view",

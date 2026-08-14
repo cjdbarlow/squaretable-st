@@ -43,6 +43,15 @@ class PackageMetadataTest(unittest.TestCase):
         commands = {entry['command'] for entry in entries}
         self.assertTrue(CELL_COMMANDS <= commands)
 
+    def test_command_palette_uses_squaretable_caption_prefix(self):
+        entries = load_json_with_comments(
+            PROJECT_ROOT / 'Default.sublime-commands')
+
+        self.assertTrue(entries)
+        self.assertTrue(all(
+            entry['caption'].startswith('SquareTable: ')
+            for entry in entries))
+
     def test_each_platform_binds_cell_commands(self):
         expected = {
             ('ctrl+alt+shift+down',): 'table_editor_insert_cell_row',

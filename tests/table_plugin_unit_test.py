@@ -566,6 +566,9 @@ class CellCommandIntegrationTest(unittest.TestCase):
 
         self.assertEqual("ordinary text", view.text)
         self.assertTrue(plugin.sublime.status_messages)
+        self.assertTrue(all(
+            message.startswith('SquareTable: ')
+            for message in plugin.sublime.status_messages))
 
     def test_palette_selection_command_outside_table_reports_error(self):
         plugin = load_plugin()

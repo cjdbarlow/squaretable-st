@@ -1,79 +1,79 @@
 [
-    { "caption": "Table Editor: Enable for current view", 
+    { "caption": "SquareTable: Enable for current view",
       "command": "table_editor_enable_for_current_view", "args": {"prop": "enable_table_editor"} },
 
-    { "caption": "Table Editor: Disable for current view", 
+    { "caption": "SquareTable: Disable for current view",
       "command": "table_editor_disable_for_current_view" , "args": {"prop": "enable_table_editor"}},
 
 
-    { "caption": "Table Editor: Enable 'keep_space_left' for current view", 
-      "command": "table_editor_enable_for_current_view", 
+    { "caption": "SquareTable: Enable 'keep_space_left' for current view",
+      "command": "table_editor_enable_for_current_view",
       "args": {"prop": "table_editor_keep_space_left"} },
 
-    { "caption": "Table Editor: Disable 'keep_space_left' for current view", 
-      "command": "table_editor_disable_for_current_view" , 
+    { "caption": "SquareTable: Disable 'keep_space_left' for current view",
+      "command": "table_editor_disable_for_current_view" ,
       "args": {"prop": "table_editor_keep_space_left"}},
 
 
-    { "caption": "Table Editor: Enable 'detect_header' for current view", 
-      "command": "table_editor_enable_for_current_view", 
+    { "caption": "SquareTable: Enable 'detect_header' for current view",
+      "command": "table_editor_enable_for_current_view",
       "args": {"prop": "table_editor_detect_header"} },
 
-    { "caption": "Table Editor: Disable 'detect_header' for current view", 
-      "command": "table_editor_disable_for_current_view" , 
+    { "caption": "SquareTable: Disable 'detect_header' for current view",
+      "command": "table_editor_disable_for_current_view" ,
       "args": {"prop": "table_editor_detect_header"}},
 
-    { "caption": "Table Editor: Enable 'align_number_right' for current view", 
-      "command": "table_editor_enable_for_current_view", 
+    { "caption": "SquareTable: Enable 'align_number_right' for current view",
+      "command": "table_editor_enable_for_current_view",
       "args": {"prop": "table_editor_align_number_right"} },
 
-    { "caption": "Table Editor: Disable 'align_number_right' for current view", 
-      "command": "table_editor_disable_for_current_view" , 
+    { "caption": "SquareTable: Disable 'align_number_right' for current view",
+      "command": "table_editor_disable_for_current_view" ,
       "args": {"prop": "table_editor_align_number_right"}},
     
 
-    { "caption": "Table Editor: Enable for current syntax", 
+    { "caption": "SquareTable: Enable for current syntax",
       "command": "table_editor_enable_for_current_syntax" },
 
-    { "caption": "Table Editor: Disable for current syntax", 
+    { "caption": "SquareTable: Disable for current syntax",
       "command": "table_editor_disable_for_current_syntax"},
 
-    { "caption": "Table Editor: Show demo film in new scratch view", 
+    { "caption": "SquareTable: Show demo film in new scratch view",
       "command": "table_editor_film" },
 
-    { "caption": "Table Editor: Set table syntax 'Simple' for current view", 
+    { "caption": "SquareTable: Set table syntax 'Simple' for current view",
       "command": "table_editor_set_syntax", "args": {"syntax": "Simple"} },
 
-    { "caption": "Table Editor: Set table syntax 'EmacsOrgMode' for current view", 
+    { "caption": "SquareTable: Set table syntax 'EmacsOrgMode' for current view",
       "command": "table_editor_set_syntax", "args": {"syntax": "EmacsOrgMode"} },
 
-    { "caption": "Table Editor: Set table syntax 'Pandoc' for current view", 
+    { "caption": "SquareTable: Set table syntax 'Pandoc' for current view",
       "command": "table_editor_set_syntax", "args": {"syntax": "Pandoc"} },
 
-    { "caption": "Table Editor: Set table syntax 'MultiMarkdown' for current view", 
+    { "caption": "SquareTable: Set table syntax 'MultiMarkdown' for current view",
       "command": "table_editor_set_syntax", "args": {"syntax": "MultiMarkdown"} },
 
-    { "caption": "Table Editor: Set table syntax 'reStructuredText' for current view", 
+    { "caption": "SquareTable: Set table syntax 'reStructuredText' for current view",
       "command": "table_editor_set_syntax", "args": {"syntax": "reStructuredText"} },
 
-    { "caption": "Table Editor: Set table syntax 'Textile' for current view", 
+    { "caption": "SquareTable: Set table syntax 'Textile' for current view",
       "command": "table_editor_set_syntax", "args": {"syntax": "Textile"} },
 
-    { "caption": "Table Editor: Insert row in current cell",
+    { "caption": "SquareTable: Insert row in current cell",
       "command": "table_editor_insert_cell_row" },
 
-    { "caption": "Table Editor: Delete row from current cell",
+    { "caption": "SquareTable: Delete row from current cell",
       "command": "table_editor_delete_cell_row" },
 
-    { "caption": "Table Editor: Move row up in current cell",
+    { "caption": "SquareTable: Move row up in current cell",
       "command": "table_editor_move_cell_row_up" },
 
-    { "caption": "Table Editor: Move row down in current cell",
+    { "caption": "SquareTable: Move row down in current cell",
       "command": "table_editor_move_cell_row_down" },
 
-    { "caption": "Table Editor: Indent selected rows in current cell",
+    { "caption": "SquareTable: Indent selected rows in current cell",
       "command": "table_editor_indent_cell_rows" },
 
-    { "caption": "Table Editor: Outdent selected rows in current cell",
+    { "caption": "SquareTable: Outdent selected rows in current cell",
       "command": "table_editor_outdent_cell_rows" }
 ]
