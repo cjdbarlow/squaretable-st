@@ -30,7 +30,7 @@
     { "caption": "SquareTable: Disable 'align_number_right' for current view",
       "command": "table_editor_disable_for_current_view" ,
       "args": {"prop": "table_editor_align_number_right"}},
-    
+
 
     { "caption": "SquareTable: Enable for current syntax",
       "command": "table_editor_enable_for_current_syntax" },
@@ -55,6 +55,62 @@
 
     { "caption": "SquareTable: Set table syntax 'Textile' for current view",
       "command": "table_editor_set_syntax", "args": {"syntax": "Textile"} },
+
+
+    { "caption": "SquareTable: Align table",
+      "command": "table_editor_align" },
+
+    { "caption": "SquareTable: Next field",
+      "command": "table_editor_next_field" },
+
+    { "caption": "SquareTable: Previous field",
+      "command": "table_editor_previous_field" },
+
+    { "caption": "SquareTable: Next row",
+      "command": "table_editor_next_row" },
+
+    { "caption": "SquareTable: Move column left",
+      "command": "table_editor_move_column_left" },
+
+    { "caption": "SquareTable: Move column right",
+      "command": "table_editor_move_column_right" },
+
+    { "caption": "SquareTable: Delete column",
+      "command": "table_editor_delete_column" },
+
+    { "caption": "SquareTable: Insert column",
+      "command": "table_editor_insert_column" },
+
+    { "caption": "SquareTable: Delete row",
+      "command": "table_editor_kill_row" },
+
+    { "caption": "SquareTable: Insert row",
+      "command": "table_editor_insert_row" },
+
+    { "caption": "SquareTable: Move row up",
+      "command": "table_editor_move_row_up" },
+
+    { "caption": "SquareTable: Move row down",
+      "command": "table_editor_move_row_down" },
+
+    { "caption": "SquareTable: Insert single separator",
+      "command": "table_editor_insert_single_hline" },
+
+    { "caption": "SquareTable: Insert header separator",
+      "command": "table_editor_insert_double_hline" },
+
+    { "caption": "SquareTable: Insert separator and move",
+      "command": "table_editor_hline_and_move" },
+
+    { "caption": "SquareTable: Split column down",
+      "command": "table_editor_split_column_down" },
+
+    { "caption": "SquareTable: Join lines",
+      "command": "table_editor_join_lines" },
+
+    { "caption": "SquareTable: Convert selection from CSV",
+      "command": "table_editor_csv_to_table" },
+
 
     { "caption": "SquareTable: Insert row in current cell",
       "command": "table_editor_insert_cell_row" },
