@@ -1,5 +1,7 @@
 # SquareTable
 
+<img src="icon.png" alt="SquareTable icon" width="96" align="right">
+
 SquareTable is a Sublime Text 4 plugin for editing plain-text tables. It is a fork of [SublimeTableEditor](https://github.com/vkocubinsky/SublimeTableEditor), extended for multiline Pandoc and reStructuredText grid tables.
 
 ## Installation
