@@ -1,9 +1,9 @@
 import unittest
 
 try:
-    from .. import table_list
+    from ..squaretable import table_list
 except (ImportError, ValueError):
-    import table_list
+    from squaretable import table_list
 
 
 class ListContinuationTest(unittest.TestCase):

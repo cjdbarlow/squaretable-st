@@ -1,6 +1,7 @@
 """Unit tests for the Sublime plugin integration layer."""
 
 import importlib
+from pathlib import Path
 import sys
 import types
 import unittest
@@ -97,8 +98,15 @@ def load_plugin():
     sublime_plugin.WindowCommand = object
     sys.modules['sublime'] = sublime
     sys.modules['sublime_plugin'] = sublime_plugin
-    sys.modules.pop('table_plugin', None)
-    return importlib.import_module('table_plugin')
+    # Sublime loads root plugins inside the installed package's namespace.
+    package_name = 'SquareTable'
+    if package_name not in sys.modules:
+        package = types.ModuleType(package_name)
+        package.__path__ = [str(Path(__file__).resolve().parents[1])]
+        sys.modules[package_name] = package
+    module_name = package_name + '.table_plugin'
+    sys.modules.pop(module_name, None)
+    return importlib.import_module(module_name)
 
 
 class Settings(dict):
@@ -117,6 +125,16 @@ class SyntaxView(object):
 
 
 class SyntaxDetectionTest(unittest.TestCase):
+
+    def test_registered_commands_use_the_table_editor_namespace(self):
+        plugin = load_plugin()
+        commands = [value for value in vars(plugin).values()
+                    if isinstance(value, type) and
+                    issubclass(value, TextCommand)]
+
+        self.assertTrue(commands)
+        self.assertEqual([], [command.__name__ for command in commands
+                              if not command.__name__.startswith('TableEditor')])
 
     def test_detects_st4_restructured_text_resource(self):
         plugin = load_plugin()
@@ -144,7 +162,7 @@ class MergeTest(unittest.TestCase):
     def test_removes_deleted_physical_line_including_newline(self):
         plugin = load_plugin()
         view = FakeView("before\n+---+\n| a |\n| b |\n+---+\nafter")
-        command = plugin.AbstractTableCommand(view)
+        command = plugin.TableEditorCommand(view)
         ctx = Context()
         ctx.table = RenderedTable(["+---+", "| a |", "+---+"])
         ctx.first_table_row = 1
@@ -158,7 +176,7 @@ class MergeTest(unittest.TestCase):
         plugin = load_plugin()
         view = FakeView(
             "before\n+---+\n| a |\n| b |\n| c |\n+---+\nafter")
-        command = plugin.AbstractTableCommand(view)
+        command = plugin.TableEditorCommand(view)
         ctx = Context()
         ctx.table = RenderedTable(["+---+", "| a |", "+---+"])
         ctx.first_table_row = 1
@@ -339,7 +357,7 @@ class CellCommandIntegrationTest(unittest.TestCase):
         plugin.TableEditorNextRow(view).run(None)
 
         self.assertNotEqual(dirty, view.text)
-        import table_grid_model
+        from SquareTable.squaretable import table_grid_model
         grid = table_grid_model.GridDocument.from_text(view.text)
         cells = dict((cell.bounds(), cell.rows) for cell in grid.cells)
         self.assertEqual(['D', 'letters', ''], cells[(1, 2, 2, 3)])
@@ -354,7 +372,7 @@ class CellCommandIntegrationTest(unittest.TestCase):
         plugin.TableEditorNextField(view).run(None)
 
         self.assertNotEqual(dirty, view.text)
-        import table_grid_model
+        from SquareTable.squaretable import table_grid_model
         grid = table_grid_model.GridDocument.from_text(view.text)
         cells = dict((cell.bounds(), cell.rows) for cell in grid.cells)
         self.assertEqual(['D', 'letters'], cells[(1, 2, 2, 3)])
@@ -375,7 +393,7 @@ class CellCommandIntegrationTest(unittest.TestCase):
 
         plugin.TableEditorNextField(view).run(None)
 
-        import table_grid_model
+        from SquareTable.squaretable import table_grid_model
         grid = table_grid_model.GridDocument.from_text(view.text)
         self.assertEqual(1, len(grid.logical_row_ranges()))
         row, column = view.rowcol(view.sel()[0].begin())
@@ -395,7 +413,7 @@ class CellCommandIntegrationTest(unittest.TestCase):
 
         plugin.TableEditorNextRow(view).run(None)
 
-        import table_grid_model
+        from SquareTable.squaretable import table_grid_model
         grid = table_grid_model.GridDocument.from_text(view.text)
         first = next(cell for cell in grid.cells if cell.x0 == 0)
         self.assertEqual(['A', '- one', '-'], first.rows)
@@ -415,7 +433,7 @@ class CellCommandIntegrationTest(unittest.TestCase):
 
         plugin.TableEditorNextRow(view).run(None)
 
-        import table_grid_model
+        from SquareTable.squaretable import table_grid_model
         grid = table_grid_model.GridDocument.from_text(view.text)
         cells = dict((cell.bounds(), cell.rows) for cell in grid.cells)
         self.assertEqual(['', ''], cells[(0, 3, 2, 4)])
@@ -433,7 +451,7 @@ class CellCommandIntegrationTest(unittest.TestCase):
 
         plugin.TableEditorNextRow(view).run(None)
 
-        import table_grid_model
+        from SquareTable.squaretable import table_grid_model
         grid = table_grid_model.GridDocument.from_text(view.text)
         cells = dict((cell.bounds(), cell.rows) for cell in grid.cells)
         self.assertEqual(['letters', ''], cells[(0, 3, 2, 4)])
@@ -448,7 +466,7 @@ class CellCommandIntegrationTest(unittest.TestCase):
 
         plugin.TableEditorNextField(view).run(None)
 
-        import table_grid_model
+        from SquareTable.squaretable import table_grid_model
         grid = table_grid_model.GridDocument.from_text(view.text)
         cells = dict((cell.bounds(), cell.rows) for cell in grid.cells)
         self.assertEqual([''], cells[(0, 3, 2, 4)])
@@ -467,7 +485,7 @@ class CellCommandIntegrationTest(unittest.TestCase):
 
         plugin.TableEditorNextField(view).run(None)
 
-        import table_grid_model
+        from SquareTable.squaretable import table_grid_model
         grid = table_grid_model.GridDocument.from_text(view.text)
         cells = dict((cell.bounds(), cell.rows) for cell in grid.cells)
         self.assertEqual([''], cells[(0, 1, 1, 2)])
@@ -482,8 +500,8 @@ class CellCommandIntegrationTest(unittest.TestCase):
 
         plugin.TableEditorInsertCellRow(view).run(None)
 
-        import table_grid
-        import table_lib
+        from SquareTable.squaretable import table_grid
+        from SquareTable.squaretable import table_lib
         table = table_lib.pandoc_syntax().table_parser.parse_text(view.text)
         self.assertEqual(["- one", "-"],
                          table_grid.GridTable(table).cell_rows(0, 0))
@@ -498,8 +516,8 @@ class CellCommandIntegrationTest(unittest.TestCase):
 
         plugin.TableEditorInsertCellRow(view).run(None)
 
-        import table_grid
-        import table_lib
+        from SquareTable.squaretable import table_grid
+        from SquareTable.squaretable import table_lib
         table = table_lib.pandoc_syntax().table_parser.parse_text(view.text)
         grid = table_grid.GridTable(table)
         self.assertEqual(['- x|y', '-'], grid.cell_rows(0, 0))
@@ -514,8 +532,8 @@ class CellCommandIntegrationTest(unittest.TestCase):
 
         plugin.TableEditorInsertCellRow(view).run(None)
 
-        import table_grid
-        import table_lib
+        from SquareTable.squaretable import table_grid
+        from SquareTable.squaretable import table_lib
         table = table_lib.pandoc_syntax().table_parser.parse_text(view.text)
         grid = table_grid.GridTable(table)
         self.assertEqual(['- x\\|y', '-'], grid.cell_rows(0, 0))
@@ -529,8 +547,8 @@ class CellCommandIntegrationTest(unittest.TestCase):
 
         plugin.TableEditorInsertCellRow(view).run(None)
 
-        import table_grid
-        import table_lib
+        from SquareTable.squaretable import table_grid
+        from SquareTable.squaretable import table_lib
         table = table_lib.re_structured_text_syntax().table_parser.parse_text(
             view.text)
         self.assertEqual(['|name|', ''],
@@ -547,8 +565,8 @@ class CellCommandIntegrationTest(unittest.TestCase):
 
         plugin.TableEditorIndentCellRows(view).run(None)
 
-        import table_grid
-        import table_lib
+        from SquareTable.squaretable import table_grid
+        from SquareTable.squaretable import table_lib
         table = table_lib.pandoc_syntax().table_parser.parse_text(view.text)
         self.assertEqual(['    - x|y'],
                          table_grid.GridTable(table).cell_rows(0, 0))
@@ -685,7 +703,7 @@ class SingleCaretGridCommandTest(unittest.TestCase):
     def test_rejects_multiple_carets_before_running_operation(self):
         plugin = load_plugin()
 
-        class ProbeCommand(plugin.SingleCaretGridCommand):
+        class ProbeCommand(plugin.TableEditorSingleCaretGridCommand):
             def run_one_sel(self, unused_edit, unused_selection):
                 raise AssertionError("operation must not run")
 
@@ -698,7 +716,7 @@ class SingleCaretGridCommandTest(unittest.TestCase):
     def test_rejects_non_empty_selection_before_running_operation(self):
         plugin = load_plugin()
 
-        class ProbeCommand(plugin.SingleCaretGridCommand):
+        class ProbeCommand(plugin.TableEditorSingleCaretGridCommand):
             def run_one_sel(self, unused_edit, unused_selection):
                 raise AssertionError("operation must not run")
 

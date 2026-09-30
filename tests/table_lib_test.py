@@ -13,11 +13,11 @@ import io
 from contextlib import redirect_stdout
 
 try:
-    from .. import table_lib
-    from .. import table_base as tbase
+    from ..squaretable import table_lib
+    from ..squaretable import table_base as tbase
 except (ImportError, ValueError):
-    import table_lib
-    import table_base as tbase
+    from squaretable import table_lib
+    from squaretable import table_base as tbase
 
 
 class BaseTableTest(unittest.TestCase):

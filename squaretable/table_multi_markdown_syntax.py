@@ -14,12 +14,8 @@ import math
 import re
 
 
-try:
-    from . import table_base as tbase
-    from . import table_line_parser as tparser
-except (ImportError, ValueError):
-    import table_base as tbase
-    import table_line_parser as tparser
+from . import table_base as tbase
+from . import table_line_parser as tparser
 
 
 def create_syntax(table_configuration=None):

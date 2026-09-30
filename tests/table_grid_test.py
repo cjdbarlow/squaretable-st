@@ -1,13 +1,13 @@
 import unittest
 
 try:
-    from .. import table_base as tbase
-    from .. import table_grid
-    from .. import table_lib
+    from ..squaretable import table_base as tbase
+    from ..squaretable import table_grid
+    from ..squaretable import table_lib
 except (ImportError, ValueError):
-    import table_base as tbase
-    import table_grid
-    import table_lib
+    from squaretable import table_base as tbase
+    from squaretable import table_grid
+    from squaretable import table_lib
 
 
 class GridTableTest(unittest.TestCase):

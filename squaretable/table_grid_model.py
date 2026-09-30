@@ -1,13 +1,8 @@
 import re
 
-try:
-    from . import table_base as tbase
-    from . import table_list as tlist
-    from .widechar_support import wlen
-except (ImportError, ValueError):
-    import table_base as tbase
-    import table_list as tlist
-    from widechar_support import wlen
+from . import table_base as tbase
+from . import table_list as tlist
+from .widechar_support import wlen
 
 
 _FULL_BORDER_RE = re.compile(r'^\+(?:[-=]+\+)+$')

@@ -14,12 +14,8 @@ import math
 import re
 
 
-try:
-    from . import table_base as tbase
-    from .widechar_support import wlen, wcount
-except (ImportError, ValueError):
-    import table_base as tbase
-    from widechar_support import wlen, wcount
+from . import table_base as tbase
+from .widechar_support import wlen, wcount
 
 def create_syntax(table_configuration=None):
     return TextileTableSyntax(table_configuration)

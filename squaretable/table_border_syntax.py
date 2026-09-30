@@ -13,10 +13,7 @@ from __future__ import division
 
 import re
 
-try:
-    from . import table_base as tbase
-except (ImportError, ValueError):
-    import table_base as tbase
+from . import table_base as tbase
 
 
 def is_grid_table(table):

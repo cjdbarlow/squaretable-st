@@ -12,22 +12,13 @@ from __future__ import division
 
 import csv
 
-try:
-    from . import table_base as tbase
-    from . import table_simple_syntax as simple
-    from . import table_emacs_org_mode_syntax as emacs
-    from . import table_pandoc_syntax as pandoc
-    from . import table_multi_markdown_syntax as markdown
-    from . import table_re_structured_text_syntax as re_structured_text
-    from . import table_textile_syntax as textile
-except (ImportError, ValueError):
-    import table_base as tbase
-    import table_simple_syntax as simple
-    import table_emacs_org_mode_syntax as emacs
-    import table_pandoc_syntax as pandoc
-    import table_multi_markdown_syntax as markdown
-    import table_re_structured_text_syntax as re_structured_text
-    import table_textile_syntax as textile
+from . import table_base as tbase
+from . import table_simple_syntax as simple
+from . import table_emacs_org_mode_syntax as emacs
+from . import table_pandoc_syntax as pandoc
+from . import table_multi_markdown_syntax as markdown
+from . import table_re_structured_text_syntax as re_structured_text
+from . import table_textile_syntax as textile
 
 
 def simple_syntax(table_configuration=None):

@@ -14,12 +14,8 @@ import math
 import re
 import csv
 
-try:
-    from . import table_line_parser as tparser
-    from .widechar_support import wlen, wcount
-except (ImportError, ValueError):
-    import table_line_parser as tparser
-    from widechar_support import wlen, wcount
+from . import table_line_parser as tparser
+from .widechar_support import wlen, wcount
 
 
 class TableConfiguration:

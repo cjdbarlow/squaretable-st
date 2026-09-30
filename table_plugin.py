@@ -11,14 +11,9 @@ import sublime
 import sublime_plugin
 import re
 
-try:
-    from . import table_lib as tlib
-    from . import table_base as tbase
-    from . import table_grid_model as tmodel
-except (ImportError, ValueError):
-    import table_lib as tlib
-    import table_base as tbase
-    import table_grid_model as tmodel
+from .squaretable import table_lib as tlib
+from .squaretable import table_base as tbase
+from .squaretable import table_grid_model as tmodel
 
 
 GRID_SYNTAX_NAMES = ('Pandoc', 'reStructuredText')
@@ -171,7 +166,7 @@ class TableContext:
         return text
 
 
-class AbstractTableCommand(sublime_plugin.TextCommand):
+class TableEditorCommand(sublime_plugin.TextCommand):
 
     def detect_syntax(self):
         syntax_name = configured_syntax_name(self.view)
@@ -283,7 +278,7 @@ class AbstractTableCommand(sublime_plugin.TextCommand):
         return self.visual_field_sel(ctx, row_num, visual_field_num)
 
 
-class TableEditorAlignCommand(AbstractTableCommand):
+class TableEditorAlignCommand(TableEditorCommand):
     """
     Key: ctrl+shift+a
     Re-align the table without change the current table field.
@@ -293,7 +288,7 @@ class TableEditorAlignCommand(AbstractTableCommand):
         return ctx.table_driver.editor_align(ctx.table, ctx.table_pos)
 
 
-class TableEditorNextField(AbstractTableCommand):
+class TableEditorNextField(TableEditorCommand):
     """
     Key: tab
     Re-align the table, move to the next field.
@@ -303,7 +298,7 @@ class TableEditorNextField(AbstractTableCommand):
         return ctx.table_driver.editor_next_field(ctx.table, ctx.table_pos)
 
 
-class TableEditorPreviousField(AbstractTableCommand):
+class TableEditorPreviousField(TableEditorCommand):
     """
     Key: shift+tab
     Re-align, move to previous field.
@@ -325,15 +320,15 @@ def reject_unsafe_grid_selections(view):
     return False
 
 
-class SingleCaretLogicalGridCommand(AbstractTableCommand):
+class TableEditorSingleCaretLogicalGridCommand(TableEditorCommand):
 
     def run(self, edit):
         if reject_unsafe_grid_selections(self.view):
             return
-        AbstractTableCommand.run(self, edit)
+        TableEditorCommand.run(self, edit)
 
 
-class TableEditorNextRow(SingleCaretLogicalGridCommand):
+class TableEditorNextRow(TableEditorSingleCaretLogicalGridCommand):
     """
     Key: enter
     Re-align the table and move down to next row.
@@ -344,7 +339,7 @@ class TableEditorNextRow(SingleCaretLogicalGridCommand):
         return ctx.table_driver.editor_next_row(ctx.table, ctx.table_pos)
 
 
-class TableEditorMoveColumnLeft(SingleCaretLogicalGridCommand):
+class TableEditorMoveColumnLeft(TableEditorSingleCaretLogicalGridCommand):
     """
     Key: alt+left
     Move the current column left.
@@ -354,7 +349,7 @@ class TableEditorMoveColumnLeft(SingleCaretLogicalGridCommand):
                                                         ctx.table_pos)
 
 
-class TableEditorMoveColumnRight(SingleCaretLogicalGridCommand):
+class TableEditorMoveColumnRight(TableEditorSingleCaretLogicalGridCommand):
     """
     Key: alt+right
     Move the current column right.
@@ -364,7 +359,7 @@ class TableEditorMoveColumnRight(SingleCaretLogicalGridCommand):
                                                          ctx.table_pos)
 
 
-class TableEditorDeleteColumn(SingleCaretLogicalGridCommand):
+class TableEditorDeleteColumn(TableEditorSingleCaretLogicalGridCommand):
     """
     Key: alt+shift+left
     Kill the current column.
@@ -374,7 +369,7 @@ class TableEditorDeleteColumn(SingleCaretLogicalGridCommand):
                                                      ctx.table_pos)
 
 
-class TableEditorInsertColumn(SingleCaretLogicalGridCommand):
+class TableEditorInsertColumn(TableEditorSingleCaretLogicalGridCommand):
     """
     Keys: alt+shift+right
     Insert a new column to the left of the cursor position.
@@ -384,7 +379,7 @@ class TableEditorInsertColumn(SingleCaretLogicalGridCommand):
                                                      ctx.table_pos)
 
 
-class TableEditorKillRow(SingleCaretLogicalGridCommand):
+class TableEditorKillRow(TableEditorSingleCaretLogicalGridCommand):
     """
     Key : alt+shift+up
     Kill the current row.
@@ -393,7 +388,7 @@ class TableEditorKillRow(SingleCaretLogicalGridCommand):
         return ctx.table_driver.editor_kill_row(ctx.table, ctx.table_pos)
 
 
-class TableEditorInsertRow(SingleCaretLogicalGridCommand):
+class TableEditorInsertRow(TableEditorSingleCaretLogicalGridCommand):
     """
     Key: alt+shift+down
     Insert a new row above the current row.
@@ -402,7 +397,7 @@ class TableEditorInsertRow(SingleCaretLogicalGridCommand):
         return ctx.table_driver.editor_insert_row(ctx.table, ctx.table_pos)
 
 
-class TableEditorMoveRowUp(SingleCaretLogicalGridCommand):
+class TableEditorMoveRowUp(TableEditorSingleCaretLogicalGridCommand):
     """
     Key: alt+up
     Move the current row up.
@@ -411,7 +406,7 @@ class TableEditorMoveRowUp(SingleCaretLogicalGridCommand):
         return ctx.table_driver.editor_move_row_up(ctx.table, ctx.table_pos)
 
 
-class TableEditorMoveRowDown(SingleCaretLogicalGridCommand):
+class TableEditorMoveRowDown(TableEditorSingleCaretLogicalGridCommand):
     """
     Key: alt+down
     Move the current row down.
@@ -428,7 +423,7 @@ def multiline_grid_driver(ctx):
     return ctx.table_driver
 
 
-class SingleCaretGridCommand(AbstractTableCommand):
+class TableEditorSingleCaretGridCommand(TableEditorCommand):
 
     def run(self, edit):
         selections = list(self.view.sel())
@@ -436,31 +431,31 @@ class SingleCaretGridCommand(AbstractTableCommand):
             sublime.status_message(
                 "SquareTable: Multiline grid editing requires one caret")
             return
-        AbstractTableCommand.run(self, edit)
+        TableEditorCommand.run(self, edit)
 
 
-class TableEditorInsertCellRow(SingleCaretGridCommand):
+class TableEditorInsertCellRow(TableEditorSingleCaretGridCommand):
 
     def run_operation(self, ctx):
         return multiline_grid_driver(ctx).editor_insert_cell_row(
             ctx.table, ctx.table_pos)
 
 
-class TableEditorDeleteCellRow(SingleCaretGridCommand):
+class TableEditorDeleteCellRow(TableEditorSingleCaretGridCommand):
 
     def run_operation(self, ctx):
         return multiline_grid_driver(ctx).editor_delete_cell_row(
             ctx.table, ctx.table_pos)
 
 
-class TableEditorMoveCellRowUp(SingleCaretGridCommand):
+class TableEditorMoveCellRowUp(TableEditorSingleCaretGridCommand):
 
     def run_operation(self, ctx):
         return multiline_grid_driver(ctx).editor_move_cell_row_up(
             ctx.table, ctx.table_pos)
 
 
-class TableEditorMoveCellRowDown(SingleCaretGridCommand):
+class TableEditorMoveCellRowDown(TableEditorSingleCaretGridCommand):
 
     def run_operation(self, ctx):
         return multiline_grid_driver(ctx).editor_move_cell_row_down(
@@ -515,16 +510,16 @@ class CellRowsSelectionCommand(object):
 
 
 class TableEditorIndentCellRows(CellRowsSelectionCommand,
-                                AbstractTableCommand):
+                                TableEditorCommand):
     pass
 
 
 class TableEditorOutdentCellRows(CellRowsSelectionCommand,
-                                 AbstractTableCommand):
+                                 TableEditorCommand):
     outdent = True
 
 
-class TableEditorInsertSingleHline(AbstractTableCommand):
+class TableEditorInsertSingleHline(TableEditorCommand):
     """
     Key: ctrl+k,-
     Insert single horizontal line below current row.
@@ -534,7 +529,7 @@ class TableEditorInsertSingleHline(AbstractTableCommand):
                                                            ctx.table_pos)
 
 
-class TableEditorInsertDoubleHline(AbstractTableCommand):
+class TableEditorInsertDoubleHline(TableEditorCommand):
     """
     Key: ctrl+k,=
     Insert double horizontal line below current row.
@@ -544,7 +539,7 @@ class TableEditorInsertDoubleHline(AbstractTableCommand):
                                                            ctx.table_pos)
 
 
-class TableEditorHlineAndMove(AbstractTableCommand):
+class TableEditorHlineAndMove(TableEditorCommand):
     """
     Key: ctrl+k, enter
     Insert a horizontal line below current row,
@@ -555,7 +550,7 @@ class TableEditorHlineAndMove(AbstractTableCommand):
                                                              ctx.table_pos)
 
 
-class TableEditorSplitColumnDown(AbstractTableCommand):
+class TableEditorSplitColumnDown(TableEditorCommand):
     """
     Key: alt+enter
     Split rest of cell down from current cursor position,
@@ -619,7 +614,7 @@ class TableEditorSplitColumnDown(AbstractTableCommand):
         return self.field_sel(ctx, row_num, field_num)
 
 
-class TableEditorJoinLines(AbstractTableCommand):
+class TableEditorJoinLines(TableEditorCommand):
     """
     Key: ctrl+j
     Join current row and next row into one if next row is not hline
@@ -628,7 +623,7 @@ class TableEditorJoinLines(AbstractTableCommand):
         return ctx.table_driver.editor_join_lines(ctx.table, ctx.table_pos)
 
 
-class TableEditorCsvToTable(AbstractTableCommand):
+class TableEditorCsvToTable(TableEditorCommand):
     """
     Command: table_csv_to_table
     Key: ctrl+k, |

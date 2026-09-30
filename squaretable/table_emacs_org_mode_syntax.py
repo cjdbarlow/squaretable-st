@@ -10,12 +10,8 @@
 from __future__ import print_function
 from __future__ import division
 
-try:
-    from . import table_base as tbase
-    from . import table_border_syntax as tborder
-except (ImportError, ValueError):
-    import table_base as tbase
-    import table_border_syntax as tborder
+from . import table_base as tbase
+from . import table_border_syntax as tborder
 
 
 def create_syntax(table_configuration=None):

@@ -1,13 +1,13 @@
 import unittest
 
 try:
-    from .. import table_base as tbase
-    from .. import table_grid_model as model
-    from ..widechar_support import wlen
+    from ..squaretable import table_base as tbase
+    from ..squaretable import table_grid_model as model
+    from ..squaretable.widechar_support import wlen
 except (ImportError, ValueError):
-    import table_base as tbase
-    import table_grid_model as model
-    from widechar_support import wlen
+    from squaretable import table_base as tbase
+    from squaretable import table_grid_model as model
+    from squaretable.widechar_support import wlen
 
 
 ROWSPAN_FIXTURE = r"""+--------------------------+---------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------+

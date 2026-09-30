@@ -1,4 +1,4 @@
-# re_structured_text_syntax.py - Support reStructuredText table syntax
+# table_pandoc_syntax.py - Pandoc table syntax
 
 # Copyright (C) 2012  Free Software Foundation, Inc.
 # SPDX-License-Identifier: Apache-2.0
@@ -10,24 +10,20 @@
 from __future__ import print_function
 from __future__ import division
 
-try:
-    from . import table_base as tbase
-    from . import table_border_syntax as tborder
-    from . import table_grid as tgrid
-except (ImportError, ValueError):
-    import table_base as tbase
-    import table_border_syntax as tborder
-    import table_grid as tgrid
+
+from . import table_base as tbase
+from . import table_border_syntax as tborder
+from . import table_grid as tgrid
 
 
 def create_syntax(table_configuration=None):
-    return ReStructuredTextTableSyntax(table_configuration)
+    return PandocTableSyntax(table_configuration)
 
 
-class ReStructuredTextTableSyntax(tbase.TableSyntax):
+class PandocTableSyntax(tbase.TableSyntax):
 
     def __init__(self, table_configuration):
-        tbase.TableSyntax.__init__(self, "reStructuredText", table_configuration)
+        tbase.TableSyntax.__init__(self, "Pandoc", table_configuration)
 
         self.table_parser = tborder.BorderTableParser(self)
         self.table_driver = tgrid.GridTableDriver(self)

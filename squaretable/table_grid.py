@@ -1,11 +1,6 @@
-try:
-    from . import table_base as tbase
-    from . import table_border_syntax as tborder
-    from . import table_grid_model as tmodel
-except (ImportError, ValueError):
-    import table_base as tbase
-    import table_border_syntax as tborder
-    import table_grid_model as tmodel
+from . import table_base as tbase
+from . import table_border_syntax as tborder
+from . import table_grid_model as tmodel
 
 
 GridPosition = tmodel.GridPosition
