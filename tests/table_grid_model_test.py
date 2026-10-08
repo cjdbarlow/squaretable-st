@@ -136,6 +136,21 @@ class GridGeometryParseTest(unittest.TestCase):
 |   | B |
 +---+---+""")
 
+    def test_visual_index_maps_columns_with_and_without_wide_characters(self):
+        # Plain lines take a shortcut where column equals string index;
+        # lines with wide characters must still walk character by character.
+        self.assertEqual(
+            [model._visual_index('| A |', column) for column in range(6)],
+            [0, 1, 2, 3, 4, 5])
+        self.assertEqual(
+            [model._visual_index('|漢字|', column) for column in (0, 1, 3, 5, 6)],
+            [0, 1, 2, 3, 4])
+        for text, column in (('| A |', 6), ('| A |', -1), ('|漢字|', 7)):
+            with self.assertRaises(tbase.TableException):
+                model._visual_index(text, column)
+        with self.assertRaises(tbase.TableException):
+            model._visual_index('|漢字|', 2)
+
     def test_discovers_atomic_boundaries_below_spanning_top_cell(self):
         grid = model.GridDocument.from_text(PANDOC_SPAN_FIXTURE)
 

@@ -311,6 +311,26 @@ class GridContextQueryTest(unittest.TestCase):
         self.assertTrue(listener.on_query_context(
             view, 'table_editor_multiline_grid', 0, False, False))
 
+    def test_empty_selection_parses_grid_once(self):
+        plugin = load_plugin()
+        listener = plugin.TableEditorContextListener()
+        text = "+---+\n| A |\n+---+"
+        view = EditingView(text, text.index('A'))
+        calls = []
+        original = plugin._grid_document_at
+
+        def counting_grid_document_at(view, point):
+            calls.append(point)
+            return original(view, point)
+
+        plugin._grid_document_at = counting_grid_document_at
+        try:
+            self.assertTrue(listener.on_query_context(
+                view, 'table_editor_multiline_grid', 0, True, True))
+        finally:
+            plugin._grid_document_at = original
+        self.assertEqual(calls, [text.index('A')])
+
 
 class CellCommandIntegrationTest(unittest.TestCase):
 

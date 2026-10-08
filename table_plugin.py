@@ -94,7 +94,7 @@ class TableEditorContextListener(sublime_plugin.EventListener):
             values.append(
                 syntax_enabled and
                 _is_grid_content(view, selection.begin()) and
-                _is_grid_content(view, end))
+                (end == selection.begin() or _is_grid_content(view, end)))
 
         if operator == sublime.OP_NOT_EQUAL:
             matches = [value != operand for value in values]

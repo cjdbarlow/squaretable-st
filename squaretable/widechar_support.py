@@ -9,6 +9,7 @@
 
 import sys
 import locale
+import re
 
 breakable_char_ranges = [
     #http://en.wikipedia.org/wiki/Han_unification
@@ -44,17 +45,17 @@ breakable_char_ranges = [
 
 
 
-def _is_widechar(c):
-    c = ord(c)
-    for i in breakable_char_ranges:
-        if isinstance(i, tuple):
-            start, end = i
-            if c >= start and c <= end:
-                return True
-        else:
-            if i == c:
-                return True
-    return False
+def _char_class_item(item):
+    if isinstance(item, tuple):
+        return '\\U{0:08x}-\\U{1:08x}'.format(*item)
+    return '\\U{0:08x}'.format(item)
+
+
+# One compiled character class so wide characters are counted in C rather
+# than by checking every character against every range in Python.
+_WIDECHAR_RE = re.compile(
+    '[' + ''.join(_char_class_item(item)
+                  for item in breakable_char_ranges) + ']')
 
 
 def _norm_text(text):
@@ -65,11 +66,7 @@ def _norm_text(text):
 
 def wcount(text):
     text = _norm_text(text)
-    count = 0
-    for c in text:
-        if _is_widechar(c):
-            count = count + 1
-    return count
+    return len(_WIDECHAR_RE.findall(text))
 
 
 def wlen(text):

@@ -1302,6 +1302,11 @@ def _normalized_grid_lines(text):
 
 
 def _visual_index(text, column):
+    # Without wide characters every character is one column wide.
+    if wlen(text) == len(text):
+        if 0 <= column <= len(text):
+            return column
+        raise tbase.TableException('Grid line is shorter than its border')
     visual = 0
     for index, char in enumerate(text):
         if visual == column:
